@@ -1,5 +1,7 @@
+
 'use client';
 
+import * as React from 'react'; // Added React import
 import type { PortfolioSummary, ProjectStatus } from '@/types/project-reports';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -82,3 +84,4 @@ export function PortfolioReportTab({
     </div>
   );
 }
+
