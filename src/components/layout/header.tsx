@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Rocket, LayoutDashboard, ShieldAlert, UserCircle, LogIn, LogOut, FileText, Briefcase } from 'lucide-react'; // Added Briefcase
+import { Rocket, LayoutDashboard, ShieldAlert, UserCircle, LogIn, LogOut, FileText, Briefcase, Calculator } from 'lucide-react'; // Added Calculator
 import { useAuth } from '@/hooks/use-auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NotificationsDropdown } from '@/components/layout/notifications-dropdown'; 
@@ -45,6 +45,12 @@ export function Header() {
               Resources
             </Link>
           </Button>
+          <Button variant="ghost" asChild className="px-2.5 sm:px-3 text-sm">
+            <Link href="/calculators">
+              <Calculator className="mr-1.5 h-4 w-4" />
+              Calculators
+            </Link>
+          </Button>
         </nav>
         
         <div className="flex items-center space-x-2 sm:space-x-3">
@@ -80,3 +86,4 @@ export function Header() {
     </header>
   );
 }
+
