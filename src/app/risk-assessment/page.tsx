@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { AssessProjectRiskInput, AssessProjectRiskOutput } from '@/ai/flows/risk-assessment';
@@ -7,16 +8,20 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ShieldAlert, Lightbulb, CheckCircle2, Loader2, ListChecks, Activity } from 'lucide-react';
-import { useState } from 'react';
+import { ShieldAlert, Lightbulb, CheckCircle2, Loader2, ListChecks, Activity, Briefcase } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { mockProjects, type Project } from '@/lib/mock-data';
+import { format, parseISO } from 'date-fns';
 
 const formSchema = z.object({
+  selectedProjectId: z.string().optional(),
   projectDescription: z.string().min(50, { message: 'Project description must be at least 50 characters.' }),
   projectTimeline: z.string().min(10, { message: 'Project timeline must be at least 10 characters.' }),
   projectBudget: z.string().min(3, { message: 'Project budget must be at least 3 characters (e.g., $1k).' }),
@@ -25,6 +30,15 @@ const formSchema = z.object({
 });
 
 type RiskAssessmentFormValues = z.infer<typeof formSchema>;
+
+const formatDateSafe = (dateString: string | undefined) => {
+  if (!dateString) return 'N/A';
+  try {
+    return format(parseISO(dateString), 'MMM d, yyyy');
+  } catch (error) {
+    return 'Invalid Date';
+  }
+};
 
 export default function RiskAssessmentPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -35,6 +49,7 @@ export default function RiskAssessmentPage() {
   const form = useForm<RiskAssessmentFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      selectedProjectId: '',
       projectDescription: '',
       projectTimeline: '',
       projectBudget: '',
@@ -43,12 +58,70 @@ export default function RiskAssessmentPage() {
     },
   });
 
+  const selectedProjectId = form.watch('selectedProjectId');
+
+  const populateFormWithProjectData = useCallback((projectId: string | undefined) => {
+    if (!projectId) {
+      form.reset({ // Reset to empty if no project selected or deselected
+        selectedProjectId: '',
+        projectDescription: '',
+        projectTimeline: '',
+        projectBudget: '',
+        teamComposition: '',
+        historicalData: form.getValues('historicalData') || '', // Preserve historical data if user typed it
+      });
+      return;
+    }
+
+    const project = mockProjects.find(p => p.id === projectId);
+    if (project) {
+      const projectDescription = project.description;
+      const projectTimeline = `Project Duration: ${formatDateSafe(project.startDate)} to ${formatDateSafe(project.endDate)}.
+Key Milestones:
+${project.keyMilestones.map(m => `- ${m.name} (Target: ${formatDateSafe(m.date)}, Status: ${m.status}, Assigned: ${m.assignedTo || 'N/A'})`).join('\n') || 'No key milestones defined.'}
+Current project status: ${project.status}.
+Completion: ${project.completionPercentage}%.`;
+      const projectBudget = `Total Budget: $${project.budget.toLocaleString()}.
+Amount Spent: $${project.spent.toLocaleString()}.
+Remaining: $${(project.budget - project.spent).toLocaleString()}.
+Budget Utilization: ${project.budget > 0 ? ((project.spent / project.budget) * 100).toFixed(1) : 0}%.`;
+      const teamComposition = `Team Lead: ${project.teamLead}.
+Assigned Team: ${project.assignedUsers && project.assignedUsers.length > 0 ? project.assignedUsers.join(', ') : 'No specific team members assigned.'}.
+Portfolio: ${project.portfolio}.
+Priority: ${project.priority}.`;
+
+      form.reset({
+        selectedProjectId: projectId,
+        projectDescription,
+        projectTimeline,
+        projectBudget,
+        teamComposition,
+        historicalData: form.getValues('historicalData') || '', // Preserve historical data
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form]); // form is stable
+
+  useEffect(() => {
+    populateFormWithProjectData(selectedProjectId);
+  }, [selectedProjectId, populateFormWithProjectData]);
+
+
   async function onSubmit(values: RiskAssessmentFormValues) {
     setIsLoading(true);
     setError(null);
     setAssessmentResult(null);
+
+    const aiInput: AssessProjectRiskInput = {
+        projectDescription: values.projectDescription,
+        projectTimeline: values.projectTimeline,
+        projectBudget: values.projectBudget,
+        teamComposition: values.teamComposition,
+        historicalData: values.historicalData,
+    };
+
     try {
-      const result = await assessProjectRisk(values as AssessProjectRiskInput);
+      const result = await assessProjectRisk(aiInput);
       setAssessmentResult(result);
       toast({
         title: 'Risk Assessment Complete',
@@ -87,12 +160,39 @@ export default function RiskAssessmentPage() {
         <CardHeader className="pb-4">
           <CardTitle className="text-2xl">Analyze Project Risks</CardTitle>
           <CardDescription>
-            Provide project details below. Our AI will analyze potential risks and suggest mitigation strategies.
+            Select an existing project to pre-fill details or enter them manually.
+            Our AI will analyze potential risks and suggest mitigation strategies.
           </CardDescription>
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <CardContent className="space-y-6 pt-2">
+            <FormField
+                control={form.control}
+                name="selectedProjectId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2"><Briefcase className="h-4 w-4 text-muted-foreground" />Select Project (Optional)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+                      <FormControl>
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Select a project to pre-fill details" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">-- Enter Manually --</SelectItem>
+                        {mockProjects.sort((a,b) => a.name.localeCompare(b.name)).map(project => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="projectDescription"
@@ -105,60 +205,64 @@ export default function RiskAssessmentPage() {
                         rows={5}
                         {...field}
                         aria-describedby="projectDescription-message"
+                        disabled={isLoading}
                       />
                     </FormControl>
                     <FormMessage id="projectDescription-message" />
                   </FormItem>
                 )}
               />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="projectTimeline"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Project Timeline</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Key milestones and deadlines (e.g., Q1: Design, Q2: Dev)" 
-                          {...field} 
-                          aria-describedby="projectTimeline-message"
-                        />
-                      </FormControl>
-                      <FormMessage id="projectTimeline-message" />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="projectBudget"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Project Budget</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Financial resources (e.g., $500,000, 10 sprints)" 
-                          {...field} 
-                          aria-describedby="projectBudget-message"
-                        />
-                      </FormControl>
-                      <FormMessage id="projectBudget-message" />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="projectTimeline"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project Timeline</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Key milestones, deadlines, current status, and completion percentage..." 
+                        rows={4}
+                        {...field} 
+                        aria-describedby="projectTimeline-message"
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                    <FormMessage id="projectTimeline-message" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="projectBudget"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project Budget & Financials</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Total budget, amount spent, remaining, and budget utilization..." 
+                        rows={3}
+                        {...field} 
+                        aria-describedby="projectBudget-message"
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                    <FormMessage id="projectBudget-message" />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="teamComposition"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Team Composition</FormLabel>
+                    <FormLabel>Team Composition & Context</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Information about the project team, roles, and experience..."
+                        placeholder="Team lead, assigned members, portfolio, and project priority..."
                         rows={3}
                         {...field}
                         aria-describedby="teamComposition-message"
+                        disabled={isLoading}
                       />
                     </FormControl>
                     <FormMessage id="teamComposition-message" />
@@ -176,6 +280,7 @@ export default function RiskAssessmentPage() {
                         placeholder="Relevant data from similar past projects, if available..."
                         rows={3}
                         {...field}
+                        disabled={isLoading}
                       />
                     </FormControl>
                   </FormItem>
@@ -183,7 +288,7 @@ export default function RiskAssessmentPage() {
               />
             </CardContent>
             <CardFooter className="flex justify-end pt-4">
-              <Button type="submit" disabled={isLoading} size="lg">
+              <Button type="submit" disabled={isLoading || !form.formState.isValid && form.formState.isSubmitted} size="lg">
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -216,6 +321,11 @@ export default function RiskAssessmentPage() {
               <CheckCircle2 className="h-7 w-7 mr-3 text-green-500" />
               Risk Assessment Results
             </CardTitle>
+            {selectedProjectId && mockProjects.find(p => p.id === selectedProjectId) && (
+              <CardDescription>
+                Assessment for project: <span className="font-semibold">{mockProjects.find(p => p.id === selectedProjectId)?.name}</span>
+              </CardDescription>
+            )}
           </CardHeader>
           <CardContent className="space-y-6 pt-2">
             <div>
@@ -274,3 +384,4 @@ export default function RiskAssessmentPage() {
     </div>
   );
 }
+
