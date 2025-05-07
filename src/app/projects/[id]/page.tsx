@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import {
   CalendarDays,
@@ -18,7 +18,7 @@ import {
   Flag,
   Activity,
   TrendingUp,
-  AlertTriangle,
+  AlertTriangle as AlertTriangleIcon, // Renamed to avoid conflict
   Clock,
   CheckCircle2,
   ChevronLeft,
@@ -26,7 +26,9 @@ import {
   BarChart3,
   GanttChartSquare,
   PieChartIcon,
-  Loader2
+  Loader2,
+  ShieldAlert, // For Risk Assessment title
+  Lightbulb, // For Mitigation Recommendations
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parseISO, differenceInDays } from 'date-fns';
@@ -38,7 +40,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 const statusIcons: Record<ProjectStatus, React.ElementType> = {
   'On Track': TrendingUp,
-  'At Risk': AlertTriangle,
+  'At Risk': AlertTriangleIcon,
   'Delayed': Clock,
   'Completed': CheckCircle2,
   'Planning': Activity,
@@ -69,7 +71,7 @@ const milestoneStatusIcons: Record<KeyMilestone['status'], React.ElementType> = 
   'Pending': Clock,
   'In Progress': TrendingUp,
   'Completed': CheckCircle2,
-  'Blocked': AlertTriangle,
+  'Blocked': AlertTriangleIcon,
 };
 
 interface ClientCalculatedMetrics {
@@ -83,7 +85,7 @@ export default function ProjectDetailPage() {
   const projectId = params.id as string;
   const { toast } = useToast();
 
-  const [project, setProject] = useState<Project | undefined>(() => mockProjects.find((p) => p.id === projectId));
+  const [project, setProject] = useState<Project | undefined>(undefined);
   const [clientCalculatedMetrics, setClientCalculatedMetrics] = useState<ClientCalculatedMetrics | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
@@ -116,14 +118,16 @@ export default function ProjectDetailPage() {
 
   const handleProjectSave = useCallback((updatedProjectData: Project) => {
     updateMockProject(updatedProjectData);
-    setProject(updatedProjectData); // Update local state to re-render the page
+    setProject(updatedProjectData); // Update local state to re-render the page with new risk data
     setIsEditDialogOpen(false);
-    toast({
-      title: "Project Updated",
-      description: `${updatedProjectData.name} has been successfully updated.`,
-      variant: "default",
-    });
-  }, [toast]);
+    // Toast is now handled in ProjectEditForm after AI assessment
+  }, []);
+
+  const getRiskScoreColor = (score: number) => {
+    if (score <= 33) return 'bg-green-500'; // Low risk
+    if (score <= 66) return 'bg-yellow-500'; // Medium risk
+    return 'bg-red-500'; // High risk
+  };
 
 
   if (!project) {
@@ -159,14 +163,14 @@ export default function ProjectDetailPage() {
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">
-              <Edit3 className="mr-2 h-4 w-4" /> Edit Project
+              <Edit3 className="mr-2 h-4 w-4" /> Edit Project & Re-assess Risk
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Project: {project.name}</DialogTitle>
               <DialogDescription>
-                Make changes to the project details below. Click save when you're done.
+                Make changes to the project details. Saving will also trigger an AI risk re-assessment.
               </DialogDescription>
             </DialogHeader>
             <ProjectEditForm
@@ -271,6 +275,68 @@ export default function ProjectDetailPage() {
           Last updated: {formatDate(project.lastUpdated)}
         </CardFooter>
       </Card>
+
+      {project.riskAssessment && (
+        <Card className="mb-8 shadow-xl">
+          <CardHeader>
+            <div className="flex items-center">
+              <ShieldAlert className="h-6 w-6 mr-3 text-primary" />
+              <CardTitle>AI Risk Assessment Overview</CardTitle>
+            </div>
+            <CardDescription>Summary of the latest AI-powered risk analysis for this project.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-2 flex items-center">
+                <ShieldAlert className="h-5 w-5 mr-2 text-accent" />
+                Overall Risk Score: {project.riskAssessment.overallRiskScore} / 100
+              </h3>
+              <Progress
+                value={project.riskAssessment.overallRiskScore}
+                className="h-3"
+                indicatorClassName={getRiskScoreColor(project.riskAssessment.overallRiskScore)}
+                aria-label={`Overall risk score: ${project.riskAssessment.overallRiskScore} out of 100`}
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                {project.riskAssessment.overallRiskScore <= 33 ? "Low Risk" : project.riskAssessment.overallRiskScore <= 66 ? "Medium Risk" : "High Risk"}
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold mb-2 flex items-center">
+                <ListChecks className="h-5 w-5 mr-2 text-accent" />
+                Identified Risks
+              </h3>
+              {project.riskAssessment.identifiedRisks.length > 0 ? (
+                <ul className="list-disc list-inside space-y-1 pl-4 bg-secondary/30 p-4 rounded-md">
+                  {project.riskAssessment.identifiedRisks.map((risk, index) => (
+                    <li key={`risk-${index}`} className="text-sm">{risk}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">No specific risks identified by the AI.</p>
+              )}
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold mb-2 flex items-center">
+                <Lightbulb className="h-5 w-5 mr-2 text-accent" />
+                Mitigation Recommendations
+              </h3>
+              {project.riskAssessment.riskMitigationRecommendations.length > 0 ? (
+                <ul className="list-disc list-inside space-y-1 pl-4 bg-secondary/30 p-4 rounded-md">
+                  {project.riskAssessment.riskMitigationRecommendations.map((rec, index) => (
+                    <li key={`rec-${index}`} className="text-sm">{rec}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">No specific mitigation recommendations provided by the AI.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
 
       <Card className="mb-8 shadow-xl">
         <CardHeader>

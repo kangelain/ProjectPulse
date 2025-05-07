@@ -1,3 +1,5 @@
+import type { AssessProjectRiskOutput } from '@/ai/flows/risk-assessment';
+
 export type ProjectStatus = 'On Track' | 'At Risk' | 'Delayed' | 'Completed' | 'Planning';
 
 export interface KeyMilestone {
@@ -22,5 +24,5 @@ export interface Project {
   lastUpdated: string;
   priority: 'High' | 'Medium' | 'Low';
   portfolio: string; // Added portfolio field
+  riskAssessment?: AssessProjectRiskOutput; // Added field for AI risk assessment results
 }
-

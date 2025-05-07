@@ -2,7 +2,7 @@
 'use client';
 
 import type { Project, KeyMilestone, ProjectStatus } from '@/types/project';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -12,10 +12,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { CalendarIcon, PlusCircle, Trash2, Save, XCircle } from 'lucide-react';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { CalendarIcon, PlusCircle, Trash2, Save, XCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
+import { AssessProjectRiskInputSchema, AssessProjectRiskOutputSchema, assessProjectRisk, type AssessProjectRiskInput } from '@/ai/flows/risk-assessment';
+import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const milestoneSchema = z.object({
   id: z.string(),
@@ -39,28 +43,33 @@ const projectFormSchema = z.object({
   status: z.enum(['On Track', 'At Risk', 'Delayed', 'Completed', 'Planning']),
   keyMilestones: z.array(milestoneSchema),
   lastUpdated: z.string(),
+  riskAssessment: AssessProjectRiskOutputSchema.optional(),
 });
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
 
 interface ProjectEditFormProps {
   project: Project;
-  onSubmit: (data: ProjectFormValues) => void;
+  onSubmit: (data: Project) => void; // Changed to Project to include riskAssessment
   onCancel: () => void;
 }
 
 export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditFormProps) {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
     defaultValues: {
       ...project,
-      // Ensure dates are in 'yyyy-MM-dd' for input type="date" or Date objects for Calendar
       startDate: project.startDate ? format(parseISO(project.startDate), 'yyyy-MM-dd') : '',
       endDate: project.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : '',
       keyMilestones: project.keyMilestones.map(m => ({
         ...m,
         date: m.date ? format(parseISO(m.date), 'yyyy-MM-dd') : '',
       })),
+      riskAssessment: project.riskAssessment || undefined,
     },
   });
 
@@ -69,17 +78,81 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
     name: 'keyMilestones',
   });
 
-  const handleFormSubmit = (values: ProjectFormValues) => {
-    const updatedValues = {
-      ...values,
-      lastUpdated: new Date().toISOString(),
-    };
-    onSubmit(updatedValues);
+  const handleFormSubmit = async (values: ProjectFormValues) => {
+    setIsSubmitting(true);
+    setFormError(null);
+
+    try {
+      // 1. Prepare basic updated project data (without AI yet)
+      let projectDataToUpdate: Project = {
+        ...values,
+        startDate: values.startDate ? new Date(values.startDate).toISOString() : new Date().toISOString(),
+        endDate: values.endDate ? new Date(values.endDate).toISOString() : new Date().toISOString(),
+        keyMilestones: values.keyMilestones.map(m => ({
+          ...m,
+          date: m.date ? new Date(m.date).toISOString() : new Date().toISOString(),
+        })),
+        lastUpdated: new Date().toISOString(),
+        // riskAssessment will be populated next
+      };
+
+      // 2. Construct input for AI risk assessment
+      const milestoneDetails = projectDataToUpdate.keyMilestones.length > 0
+        ? `Key milestones: ${projectDataToUpdate.keyMilestones.map(m => `${m.name} (Target: ${format(parseISO(m.date), 'MMMM d, yyyy')}, Status: ${m.status})`).join('; ')}.`
+        : 'No key milestones defined.';
+      
+      const aiInput: AssessProjectRiskInput = {
+        projectDescription: projectDataToUpdate.description,
+        projectTimeline: `Project duration: ${format(parseISO(projectDataToUpdate.startDate), 'MMMM d, yyyy')} to ${format(parseISO(projectDataToUpdate.endDate), 'MMMM d, yyyy')}. ${milestoneDetails}`,
+        projectBudget: `Budget: $${projectDataToUpdate.budget.toLocaleString()}, Current Spend: $${projectDataToUpdate.spent.toLocaleString()}`,
+        teamComposition: `Lead by ${projectDataToUpdate.teamLead}. Portfolio: ${projectDataToUpdate.portfolio}. Priority: ${projectDataToUpdate.priority}. Current Status: ${projectDataToUpdate.status}.`,
+        // historicalData: "" // Optionally add historical data if available
+      };
+
+      // 3. Call AI risk assessment
+      toast({
+        title: "AI Risk Assessment In Progress",
+        description: "Please wait while the AI analyzes the project risks...",
+      });
+      const riskAssessmentOutput = await assessProjectRisk(aiInput);
+
+      // 4. Merge AI results into project data
+      projectDataToUpdate.riskAssessment = riskAssessmentOutput;
+      
+      // 5. Call the original onSubmit prop
+      onSubmit(projectDataToUpdate);
+      
+      toast({
+        title: "Project Updated & Risk Assessed",
+        description: `${projectDataToUpdate.name} has been updated and risks assessed.`,
+        variant: "default",
+      });
+
+    } catch (err) {
+      console.error("Error during project save or AI assessment:", err);
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
+      setFormError(errorMessage);
+      toast({
+        title: 'Error Updating Project',
+        description: `Failed to update project or assess risks: ${errorMessage}`,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+        {formError && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{formError}</AlertDescription>
+          </Alert>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
@@ -88,7 +161,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
               <FormItem>
                 <FormLabel>Project Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter project name" {...field} />
+                  <Input placeholder="Enter project name" {...field} disabled={isSubmitting} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -101,7 +174,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
               <FormItem>
                 <FormLabel>Team Lead</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter team lead's name" {...field} />
+                  <Input placeholder="Enter team lead's name" {...field} disabled={isSubmitting} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -116,7 +189,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea placeholder="Enter project description" {...field} rows={3} />
+                <Textarea placeholder="Enter project description" {...field} rows={3} disabled={isSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -135,6 +208,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
                     <FormControl>
                       <Button
                         variant="outline"
+                        disabled={isSubmitting}
                         className={cn(
                           "w-full pl-3 text-left font-normal",
                           !field.value && "text-muted-foreground"
@@ -150,6 +224,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
                       mode="single"
                       selected={field.value ? parseISO(field.value) : undefined}
                       onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : '')}
+                      disabled={isSubmitting}
                       initialFocus
                     />
                   </PopoverContent>
@@ -169,6 +244,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
                     <FormControl>
                       <Button
                         variant="outline"
+                        disabled={isSubmitting}
                         className={cn(
                           "w-full pl-3 text-left font-normal",
                           !field.value && "text-muted-foreground"
@@ -184,6 +260,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
                       mode="single"
                       selected={field.value ? parseISO(field.value) : undefined}
                       onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : '')}
+                      disabled={isSubmitting}
                       initialFocus
                     />
                   </PopoverContent>
@@ -202,7 +279,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
               <FormItem>
                 <FormLabel>Budget ($)</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="Enter budget" {...field} />
+                  <Input type="number" placeholder="Enter budget" {...field} disabled={isSubmitting} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -215,7 +292,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
               <FormItem>
                 <FormLabel>Spent ($)</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="Enter amount spent" {...field} />
+                  <Input type="number" placeholder="Enter amount spent" {...field} disabled={isSubmitting} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -228,7 +305,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
               <FormItem>
                 <FormLabel>Completion (%)</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="0-100" {...field} />
+                  <Input type="number" placeholder="0-100" {...field} disabled={isSubmitting} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -243,7 +320,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Priority</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select priority" />
@@ -266,7 +343,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
               <FormItem>
                 <FormLabel>Portfolio</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter portfolio name" {...field} />
+                  <Input placeholder="Enter portfolio name" {...field} disabled={isSubmitting} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -278,7 +355,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Status</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select status" />
@@ -308,7 +385,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
                     <FormItem>
                       <FormLabel>Milestone Name</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Milestone name" />
+                        <Input {...field} placeholder="Milestone name" disabled={isSubmitting} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -325,6 +402,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
                           <FormControl>
                             <Button
                               variant="outline"
+                              disabled={isSubmitting}
                               className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
                             >
                               {field.value ? format(parseISO(field.value), "PPP") : <span>Pick date</span>}
@@ -337,6 +415,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
                             mode="single"
                             selected={field.value ? parseISO(field.value) : undefined}
                              onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : '')}
+                            disabled={isSubmitting}
                             initialFocus
                           />
                         </PopoverContent>
@@ -351,7 +430,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Milestone Status</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select status" />
@@ -373,6 +452,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
                 variant="ghost"
                 size="sm"
                 onClick={() => remove(index)}
+                disabled={isSubmitting}
                 className="absolute top-2 right-2 text-destructive hover:text-destructive-foreground hover:bg-destructive"
                 aria-label="Remove milestone"
               >
@@ -384,6 +464,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
             type="button"
             variant="outline"
             size="sm"
+            disabled={isSubmitting}
             onClick={() => append({ id: `m-new-${Date.now()}`, name: '', date: format(new Date(), 'yyyy-MM-dd'), status: 'Pending' })}
             className="mt-4"
           >
@@ -392,11 +473,19 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
         </div>
 
         <div className="flex justify-end space-x-3 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
              <XCircle className="mr-2 h-4 w-4" /> Cancel
           </Button>
-          <Button type="submit">
-            <Save className="mr-2 h-4 w-4" /> Save Changes
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving & Assessing...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" /> Save & Assess Risks
+              </>
+            )}
           </Button>
         </div>
       </form>

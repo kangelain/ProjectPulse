@@ -21,6 +21,7 @@ export const mockProjects: Project[] = [
     lastUpdated: '2024-07-20',
     priority: 'High',
     portfolio: 'Core Infrastructure',
+    riskAssessment: undefined, // Example: No assessment done yet
   },
   {
     id: 'proj-002',
@@ -41,6 +42,11 @@ export const mockProjects: Project[] = [
     lastUpdated: '2024-07-18',
     priority: 'High',
     portfolio: 'Core Infrastructure',
+    riskAssessment: { // Example: With a past assessment
+        identifiedRisks: ["Potential data loss during migration", "Unexpected downtime exceeding SLA"],
+        riskMitigationRecommendations: ["Perform incremental backups before migration", "Have rollback plan ready"],
+        overallRiskScore: 75,
+    }
   },
   {
     id: 'proj-003',
@@ -61,6 +67,7 @@ export const mockProjects: Project[] = [
     lastUpdated: '2024-07-15',
     priority: 'Medium',
     portfolio: 'Customer Experience',
+    riskAssessment: undefined,
   },
   {
     id: 'proj-004',
@@ -81,6 +88,11 @@ export const mockProjects: Project[] = [
     lastUpdated: '2024-04-01',
     priority: 'High',
     portfolio: 'Core Infrastructure',
+    riskAssessment: {
+        identifiedRisks: ["Initial vulnerabilities identified in audit"],
+        riskMitigationRecommendations: ["All identified vulnerabilities patched and verified"],
+        overallRiskScore: 15,
+    }
   },
    {
     id: 'proj-005',
@@ -100,6 +112,7 @@ export const mockProjects: Project[] = [
     lastUpdated: '2024-07-19',
     priority: 'Medium',
     portfolio: 'Innovation Lab',
+    riskAssessment: undefined,
   },
   {
     id: 'proj-006',
@@ -120,6 +133,7 @@ export const mockProjects: Project[] = [
     lastUpdated: '2024-07-22',
     priority: 'Medium',
     portfolio: 'Customer Experience',
+    riskAssessment: undefined,
   }
 ];
 
