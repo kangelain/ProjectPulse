@@ -1,93 +1,28 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { mockProjects } from '@/lib/mock-data';
 import type { Project, ProjectStatus } from '@/types/project';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { CalculatedProjectMetrics, PortfolioSummary, TeamLeadWorkload, TrendIndicator } from '@/types/project-reports';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, parseISO, differenceInDays, isValid, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
-import { cn } from '@/lib/utils';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { DateRangePicker } from '@/components/date-range-picker';
-import { ListChecks, Briefcase, Users, TrendingUp, PieChart, UsersRound, AlertTriangle, Clock, CheckCircle2, Activity, Loader2, Download, Mail, FileType, Search, Filter as FilterIcon, Check, XCircle, ChevronsUpDown, Brain, HelpCircle, LineChart as LineChartIcon, TrendingDown } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from "@/hooks/use-toast";
 import { predictProjectPerformance, type PredictProjectPerformanceInput, type PredictProjectPerformanceOutput, type PortfolioMetricSummary } from '@/ai/flows/predict-project-performance-flow';
-import { Alert, AlertDescription, AlertTitle as ShadcnAlertTitle } from '@/components/ui/alert';
-import { FormControl } from '@/components/ui/form'; // Added for MultiSelectFilter
+import { ListChecks, Briefcase, UsersRound, Brain, LineChart as LineChartIcon } from 'lucide-react';
 
+// Import new modular components
+import { ReportFilters } from '@/components/reports/report-filters';
+import { ReportActions } from '@/components/reports/report-actions';
+import { PortfolioDetailModal } from '@/components/reports/portfolio-detail-modal';
+import { PerformanceReportTab } from '@/components/reports/performance-report-tab';
+import { PortfolioReportTab } from '@/components/reports/portfolio-report-tab';
+import { ResourceReportTab } from '@/components/reports/resource-report-tab';
+import { TrendsReportTab } from '@/components/reports/trends-report-tab';
 
-const statusStyles: Record<ProjectStatus, { badge: string, progress: string, text?: string }> = {
-  'On Track': { badge: 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700', progress: 'bg-green-500' },
-  'At Risk': { badge: 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700', progress: 'bg-red-500' },
-  'Delayed': { badge: 'bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-600', progress: 'bg-yellow-500' },
-  'Completed': { badge: 'bg-primary/10 text-primary border-primary/30', progress: 'bg-primary' },
-  'Planning': { badge: 'bg-secondary text-secondary-foreground border-border', progress: 'bg-secondary-foreground' },
-};
-
-const priorityColors: Record<Project['priority'], string> = {
-  High: 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700',
-  Medium: 'bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-600',
-  Low: 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700',
-};
-
-const statusIcons: Record<ProjectStatus, React.ElementType> = {
-  'On Track': TrendingUp,
-  'At Risk': AlertTriangle,
-  'Delayed': Clock,
-  'Completed': CheckCircle2,
-  'Planning': Activity,
-};
-
-interface CalculatedProjectMetrics {
-  daysRemaining: number;
-  isOverdue: boolean;
-  timelineProgress: number;
-}
-
-interface PortfolioSummary {
-  portfolioName: string;
-  totalProjects: number;
-  averageCompletion: number;
-  totalBudget: number;
-  totalSpent: number;
-  budgetVariance: number;
-  statusCounts: Record<ProjectStatus, number>;
-  projects: Project[];
-}
-
-interface TeamLeadWorkload {
-  teamLead: string;
-  projectCount: number;
-  activeProjectsCount: number;
-  completedProjectsCount: number;
-  averageCompletionPercentage: number;
-  totalBudgetManaged: number;
-  statusDistribution: Record<ProjectStatus, number>;
-  projects: Array<{ id: string; name: string; status: ProjectStatus, priority: Project['priority'], completionPercentage: number }>;
-}
-
-interface TrendIndicator {
-  metricName: string;
-  currentValue: string | number;
-  trend: 'Improving' | 'Declining' | 'Stable' | 'N/A';
-  trendDescription: string;
-  historicalComparison?: string; 
-}
-
-const ALL_STATUSES = Object.keys(statusIcons) as ProjectStatus[];
-const ALL_PRIORITIES = ['High', 'Medium', 'Low'] as Project['priority'][];
-
+// Style definitions can be kept here or moved if preferred
+import { statusStyles, priorityColors, statusIcons } from './report-style-definitions';
 
 export default function ReportsPage() {
   const [projectMetrics, setProjectMetrics] = useState<Record<string, CalculatedProjectMetrics | null>>({});
@@ -95,6 +30,7 @@ export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<string>('performance');
   const { toast } = useToast();
 
+  // Filter States
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatuses, setSelectedStatuses] = useState<Set<ProjectStatus>>(new Set());
   const [selectedPriorities, setSelectedPriorities] = useState<Set<Project['priority']>>(new Set());
@@ -102,9 +38,11 @@ export default function ReportsPage() {
   const [selectedPortfolios, setSelectedPortfolios] = useState<Set<string>>(new Set());
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
+  // Modal State
   const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
   const [selectedPortfolioForModal, setSelectedPortfolioForModal] = useState<PortfolioSummary | null>(null);
 
+  // Trends & AI State
   const [trendsAndPredictions, setTrendsAndPredictions] = useState<PredictProjectPerformanceOutput | null>(null);
   const [isLoadingTrendsAndPredictions, setIsLoadingTrendsAndPredictions] = useState(false);
   const [trendsError, setTrendsError] = useState<string | null>(null);
@@ -113,6 +51,7 @@ export default function ReportsPage() {
   const uniqueTeamLeads = useMemo(() => Array.from(new Set(mockProjects.map(p => p.teamLead))).sort(), []);
   const uniquePortfolios = useMemo(() => Array.from(new Set(mockProjects.map(p => p.portfolio))).sort(), []);
 
+  // Calculate Project Metrics Effect
   useEffect(() => {
     if (mockProjects.length === 0) {
       setIsLoadingMetrics(false);
@@ -131,7 +70,7 @@ export default function ReportsPage() {
 
         const totalProjectDuration = differenceInDays(endDate, startDate);
         const daysPassed = Math.max(0, differenceInDays(now, startDate));
-        
+
         let timelineProgressCalculated = 0;
         if (project.status === 'Completed') {
             timelineProgressCalculated = 100;
@@ -153,7 +92,7 @@ export default function ReportsPage() {
     setIsLoadingMetrics(false);
   }, []);
 
-
+  // Filtered Projects Memo
   const filteredProjects = useMemo(() => {
     return mockProjects.filter(project => {
       const matchesSearch = searchTerm === '' ||
@@ -165,16 +104,16 @@ export default function ReportsPage() {
       const matchesPriority = selectedPriorities.size === 0 || selectedPriorities.has(project.priority);
       const matchesTeamLead = selectedTeamLeads.size === 0 || selectedTeamLeads.has(project.teamLead);
       const matchesPortfolio = selectedPortfolios.size === 0 || selectedPortfolios.has(project.portfolio);
-      
+
       let matchesDateRange = true;
       if (dateRange?.from && dateRange?.to) {
         try {
             const projectStartDate = parseISO(project.startDate);
-             if (!isValid(projectStartDate)) throw new Error('Invalid project start date');
+            if (!isValid(projectStartDate)) throw new Error('Invalid project start date');
             matchesDateRange = isWithinInterval(projectStartDate, { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) });
         } catch { matchesDateRange = false; }
       } else if (dateRange?.from) {
-         try {
+        try {
             const projectStartDate = parseISO(project.startDate);
             if (!isValid(projectStartDate)) throw new Error('Invalid project start date');
             matchesDateRange = projectStartDate >= startOfDay(dateRange.from);
@@ -185,7 +124,7 @@ export default function ReportsPage() {
     });
   }, [searchTerm, selectedStatuses, selectedPriorities, selectedTeamLeads, selectedPortfolios, dateRange]);
 
-
+  // Portfolio Summaries Memo
   const portfolioSummaries = useMemo<PortfolioSummary[]>(() => {
     const portfoliosMap: Record<string, PortfolioSummary> = {};
     filteredProjects.forEach(p => {
@@ -214,9 +153,10 @@ export default function ReportsPage() {
       ...s,
       averageCompletion: s.totalProjects > 0 ? parseFloat((s.averageCompletion / s.totalProjects).toFixed(2)) : 0,
       budgetVariance: s.totalBudget - s.totalSpent,
-    })).sort((a,b) => a.portfolioName.localeCompare(b.portfolioName));
+    })).sort((a, b) => a.portfolioName.localeCompare(b.portfolioName));
   }, [filteredProjects]);
 
+  // Team Lead Workloads Memo
   const teamLeadWorkloads = useMemo<TeamLeadWorkload[]>(() => {
     const leadsMap: Record<string, TeamLeadWorkload> = {};
     filteredProjects.forEach(p => {
@@ -248,12 +188,12 @@ export default function ReportsPage() {
     return Object.values(leadsMap).map(lead => ({
       ...lead,
       averageCompletionPercentage: lead.activeProjectsCount > 0 ? parseFloat((lead.averageCompletionPercentage / lead.activeProjectsCount).toFixed(2)) : 0,
-    })).sort((a,b) => b.projectCount - a.projectCount);
+    })).sort((a, b) => b.projectCount - a.projectCount);
   }, [filteredProjects]);
 
-
-   const calculateTrendIndicators = (projects: Project[]): { completionTrend: 'Improving' | 'Declining' | 'Stable', budgetTrend: 'Improving' | 'Worsening' | 'Stable' } => {
-    if (projects.length < 5) return { completionTrend: 'Stable', budgetTrend: 'Stable' }; 
+  // Calculate Trend Indicators Function
+  const calculateTrendIndicators = useCallback((projects: Project[]): { completionTrend: 'Improving' | 'Declining' | 'Stable', budgetTrend: 'Improving' | 'Worsening' | 'Stable' } => {
+    if (projects.length < 5) return { completionTrend: 'Stable', budgetTrend: 'Stable' };
 
     const sortedByStartDate = [...projects].sort((a, b) => parseISO(a.startDate).getTime() - parseISO(b.startDate).getTime());
     const olderProjects = sortedByStartDate.slice(0, Math.floor(sortedByStartDate.length / 2));
@@ -262,27 +202,28 @@ export default function ReportsPage() {
     const avgCompletionOlder = olderProjects.reduce((sum, p) => sum + p.completionPercentage, 0) / (olderProjects.length || 1);
     const avgCompletionNewer = newerProjects.reduce((sum, p) => sum + p.completionPercentage, 0) / (newerProjects.length || 1);
 
-    const budgetRatio = (p: Project) => p.budget > 0 ? p.spent / p.budget : 1; 
+    const budgetRatio = (p: Project) => p.budget > 0 ? p.spent / p.budget : 1;
     const avgBudgetRatioOlder = olderProjects.reduce((sum, p) => sum + budgetRatio(p), 0) / (olderProjects.length || 1);
     const avgBudgetRatioNewer = newerProjects.reduce((sum, p) => sum + budgetRatio(p), 0) / (newerProjects.length || 1);
-    
+
     let completionTrend: 'Improving' | 'Declining' | 'Stable' = 'Stable';
     if (avgCompletionNewer > avgCompletionOlder * 1.05) completionTrend = 'Improving';
     else if (avgCompletionNewer < avgCompletionOlder * 0.95) completionTrend = 'Declining';
 
     let budgetTrend: 'Improving' | 'Worsening' | 'Stable' = 'Stable';
-    if (avgBudgetRatioNewer < avgBudgetRatioOlder * 0.95) budgetTrend = 'Improving'; 
+    if (avgBudgetRatioNewer < avgBudgetRatioOlder * 0.95) budgetTrend = 'Improving';
     else if (avgBudgetRatioNewer > avgBudgetRatioOlder * 1.05) budgetTrend = 'Worsening';
 
     setCalculatedTrendIndicators([
-        { metricName: 'Overall Completion', currentValue: `${avgCompletionNewer.toFixed(1)}%`, trend: completionTrend, trendDescription: `Completion: ${completionTrend}`, historicalComparison: `Older: ${avgCompletionOlder.toFixed(1)}%` },
-        { metricName: 'Overall Budget Adherence', currentValue: `${avgBudgetRatioNewer.toFixed(2)} ratio`, trend: budgetTrend, trendDescription: `Budget: ${budgetTrend}`, historicalComparison: `Older: ${avgBudgetRatioOlder.toFixed(2)} ratio` },
+      { metricName: 'Overall Completion', currentValue: `${avgCompletionNewer.toFixed(1)}%`, trend: completionTrend, trendDescription: `Completion: ${completionTrend}`, historicalComparison: `Older: ${avgCompletionOlder.toFixed(1)}%` },
+      { metricName: 'Overall Budget Adherence', currentValue: `${avgBudgetRatioNewer.toFixed(2)} ratio`, trend: budgetTrend, trendDescription: `Budget: ${budgetTrend}`, historicalComparison: `Older: ${avgBudgetRatioOlder.toFixed(2)} ratio` },
     ]);
 
     return { completionTrend, budgetTrend };
-  };
+  }, []); // Empty dependency array as it only depends on the `projects` input
 
-  const fetchTrendsAndPredictions = async () => {
+  // Fetch Trends & Predictions Function
+  const fetchTrendsAndPredictions = useCallback(async () => {
     if (filteredProjects.length === 0) {
       setTrendsAndPredictions(null);
       setTrendsError("No project data to analyze for predictions.");
@@ -296,19 +237,19 @@ export default function ReportsPage() {
       const totalBudget = filteredProjects.reduce((sum, p) => sum + p.budget, 0);
       const totalSpent = filteredProjects.reduce((sum, p) => sum + p.spent, 0);
       const overallBudgetVarRatio = totalBudget > 0 ? totalSpent / totalBudget : 1;
-      
+
       const aiPortfolioSummaries: PortfolioMetricSummary[] = portfolioSummaries
-        .sort((a,b) => b.totalProjects - a.totalProjects) 
+        .sort((a, b) => b.totalProjects - a.totalProjects)
         .slice(0, 5)
         .map(ps => ({
-            portfolioName: ps.portfolioName,
-            totalProjects: ps.totalProjects,
-            averageCompletion: ps.averageCompletion,
-            budgetVarianceRatio: ps.totalBudget > 0 ? ps.totalSpent / ps.totalBudget : 1,
-            onTrackProjects: ps.statusCounts['On Track'] || 0,
-            atRiskProjects: ps.statusCounts['At Risk'] || 0,
-            delayedProjects: ps.statusCounts['Delayed'] || 0,
-      }));
+          portfolioName: ps.portfolioName,
+          totalProjects: ps.totalProjects,
+          averageCompletion: ps.averageCompletion,
+          budgetVarianceRatio: ps.totalBudget > 0 ? ps.totalSpent / ps.totalBudget : 1,
+          onTrackProjects: ps.statusCounts['On Track'] || 0,
+          atRiskProjects: ps.statusCounts['At Risk'] || 0,
+          delayedProjects: ps.statusCounts['Delayed'] || 0,
+        }));
 
       const recentTrendIndicators = calculateTrendIndicators(filteredProjects);
 
@@ -318,7 +259,7 @@ export default function ReportsPage() {
         portfolioSummaries: aiPortfolioSummaries,
         recentTrendIndicators: recentTrendIndicators,
       };
-      
+
       const result = await predictProjectPerformance(input);
       setTrendsAndPredictions(result);
     } catch (err) {
@@ -329,30 +270,16 @@ export default function ReportsPage() {
     } finally {
       setIsLoadingTrendsAndPredictions(false);
     }
-  };
+  }, [filteredProjects, portfolioSummaries, calculateTrendIndicators, toast]);
 
+  // Effect to fetch trends when tab changes
   useEffect(() => {
     if (activeTab === 'trends') {
       fetchTrendsAndPredictions();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, filteredProjects]); 
+  }, [activeTab, fetchTrendsAndPredictions]);
 
-  
-  function handleFilterToggle<T>(
-    set: Set<T>,
-    item: T,
-    setter: React.Dispatch<React.SetStateAction<Set<T>>>
-  ) {
-    const newSet = new Set(set);
-    if (newSet.has(item)) {
-      newSet.delete(item);
-    } else {
-      newSet.add(item);
-    }
-    setter(newSet);
-  }
-  
+  // Filter Handlers
   const resetFilters = () => {
     setSearchTerm('');
     setSelectedStatuses(new Set());
@@ -362,20 +289,22 @@ export default function ReportsPage() {
     setDateRange(undefined);
   };
 
+  // Formatters
   const formatDate = (dateString: string, csvFormat = false) => {
     try {
-        const parsedDate = parseISO(dateString);
-        if (!isValid(parsedDate)) return 'N/A';
-        return format(parsedDate, csvFormat ? 'yyyy-MM-dd' : 'MMM dd, yyyy');
+      const parsedDate = parseISO(dateString);
+      if (!isValid(parsedDate)) return 'N/A';
+      return format(parsedDate, csvFormat ? 'yyyy-MM-dd' : 'MMM dd, yyyy');
     } catch (error) {
-        return 'N/A';
+      return 'N/A';
     }
   };
-  
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
-  }
+  };
 
+  // CSV/HTML Generation and Download/Share Logic
   const escapeCsvValue = (value: any): string => {
     const stringValue = String(value == null ? '' : value);
     if (/[",\r\n]/.test(stringValue)) {
@@ -383,7 +312,7 @@ export default function ReportsPage() {
     }
     return stringValue;
   };
-  
+
   const escapeHtml = (unsafe: string | number | null | undefined): string => {
     if (unsafe === null || unsafe === undefined) return '';
     return String(unsafe)
@@ -406,9 +335,9 @@ export default function ReportsPage() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-       toast({ title: "CSV Downloaded", description: `${filename} has been downloaded.`, variant: "default" });
+      toast({ title: "CSV Downloaded", description: `${filename} has been downloaded.`, variant: "default" });
     } else {
-        toast({ title: "Download Failed", description: "Your browser does not support this download method.", variant: "destructive" });
+      toast({ title: "Download Failed", description: "Your browser does not support this download method.", variant: "destructive" });
     }
   };
 
@@ -431,20 +360,13 @@ export default function ReportsPage() {
           daysRemainingDisplay = `${metrics.daysRemaining} days remaining`;
         }
       }
-      
+
       return [
-        escapeCsvValue(project.name),
-        escapeCsvValue(project.status),
-        escapeCsvValue(project.priority),
-        escapeCsvValue(project.completionPercentage),
-        escapeCsvValue(project.budget),
-        escapeCsvValue(project.spent),
-        escapeCsvValue(project.budget - project.spent),
-        escapeCsvValue(formatDate(project.startDate, true)),
-        escapeCsvValue(formatDate(project.endDate, true)),
-        escapeCsvValue(daysRemainingDisplay),
-        escapeCsvValue(project.teamLead),
-        escapeCsvValue(project.portfolio),
+        escapeCsvValue(project.name), escapeCsvValue(project.status), escapeCsvValue(project.priority),
+        escapeCsvValue(project.completionPercentage), escapeCsvValue(project.budget), escapeCsvValue(project.spent),
+        escapeCsvValue(project.budget - project.spent), escapeCsvValue(formatDate(project.startDate, true)),
+        escapeCsvValue(formatDate(project.endDate, true)), escapeCsvValue(daysRemainingDisplay),
+        escapeCsvValue(project.teamLead), escapeCsvValue(project.portfolio),
       ].join(',');
     });
 
@@ -454,22 +376,15 @@ export default function ReportsPage() {
 
   const handleDownloadPortfolioSummariesCSV = () => {
     const headers = [
-      "Portfolio Name", "Total Projects", "Average Completion (%)", 
+      "Portfolio Name", "Total Projects", "Average Completion (%)",
       "Total Budget (USD)", "Total Spent (USD)", "Budget Variance (USD)",
       "Status On Track", "Status At Risk", "Status Delayed", "Status Completed", "Status Planning"
     ];
     const rows = portfolioSummaries.map(summary => [
-      escapeCsvValue(summary.portfolioName),
-      escapeCsvValue(summary.totalProjects),
-      escapeCsvValue(summary.averageCompletion),
-      escapeCsvValue(summary.totalBudget),
-      escapeCsvValue(summary.totalSpent),
-      escapeCsvValue(summary.budgetVariance),
-      escapeCsvValue(summary.statusCounts['On Track']),
-      escapeCsvValue(summary.statusCounts['At Risk']),
-      escapeCsvValue(summary.statusCounts['Delayed']),
-      escapeCsvValue(summary.statusCounts['Completed']),
-      escapeCsvValue(summary.statusCounts['Planning']),
+      escapeCsvValue(summary.portfolioName), escapeCsvValue(summary.totalProjects), escapeCsvValue(summary.averageCompletion),
+      escapeCsvValue(summary.totalBudget), escapeCsvValue(summary.totalSpent), escapeCsvValue(summary.budgetVariance),
+      escapeCsvValue(summary.statusCounts['On Track']), escapeCsvValue(summary.statusCounts['At Risk']), escapeCsvValue(summary.statusCounts['Delayed']),
+      escapeCsvValue(summary.statusCounts['Completed']), escapeCsvValue(summary.statusCounts['Planning']),
     ].join(','));
     const csvString = [headers.join(','), ...rows].join('\r\n');
     downloadCSV(csvString, "portfolio_summaries_report.csv");
@@ -482,21 +397,24 @@ export default function ReportsPage() {
       "Active: On Track", "Active: At Risk", "Active: Delayed", "Active: Planning"
     ];
     const rows = teamLeadWorkloads.map(lead => [
-      escapeCsvValue(lead.teamLead),
-      escapeCsvValue(lead.projectCount),
-      escapeCsvValue(lead.activeProjectsCount),
-      escapeCsvValue(lead.completedProjectsCount),
-      escapeCsvValue(lead.averageCompletionPercentage),
-      escapeCsvValue(lead.totalBudgetManaged),
-      escapeCsvValue(lead.statusDistribution['On Track']),
-      escapeCsvValue(lead.statusDistribution['At Risk']),
-      escapeCsvValue(lead.statusDistribution['Delayed']),
+      escapeCsvValue(lead.teamLead), escapeCsvValue(lead.projectCount), escapeCsvValue(lead.activeProjectsCount),
+      escapeCsvValue(lead.completedProjectsCount), escapeCsvValue(lead.averageCompletionPercentage),
+      escapeCsvValue(lead.totalBudgetManaged), escapeCsvValue(lead.statusDistribution['On Track']),
+      escapeCsvValue(lead.statusDistribution['At Risk']), escapeCsvValue(lead.statusDistribution['Delayed']),
       escapeCsvValue(lead.statusDistribution['Planning']),
     ].join(','));
     const csvString = [headers.join(','), ...rows].join('\r\n');
     downloadCSV(csvString, "team_overview_report.csv");
   };
 
+  const handleDownloadCSV = () => {
+    switch (activeTab) {
+      case 'performance': handleDownloadPerformanceCSV(); break;
+      case 'portfolio': handleDownloadPortfolioSummariesCSV(); break;
+      case 'resources': handleDownloadTeamOverviewCSV(); break;
+      default: toast({ title: "CSV Export", description: `CSV export is not available for the '${activeTab}' tab.`, variant: "default" });
+    }
+  };
 
   const generateReportHTML = (tab: string): string => {
     let html = `<html><head><meta charset="UTF-8"><style>
@@ -534,7 +452,6 @@ export default function ReportsPage() {
     if (dateRange?.from) html += `Start Date From: ${escapeHtml(formatDate(dateRange.from.toISOString()))}${dateRange.to ? ` To: ${escapeHtml(formatDate(dateRange.to.toISOString()))}` : ''}<br/>`;
     if (!searchTerm && selectedStatuses.size === 0 && selectedPriorities.size === 0 && selectedTeamLeads.size === 0 && selectedPortfolios.size === 0 && !dateRange?.from) html += 'None';
     html += `</div>`;
-
 
     if (tab === 'performance') {
       html += `<h2>Project Performance Details (${filteredProjects.length} projects)</h2><table>
@@ -595,7 +512,7 @@ export default function ReportsPage() {
             .map(([status, count]) => `${escapeHtml(status)}: ${count}`)
             .join(', ');
         if (!statusDistHtml) statusDistHtml = 'N/A';
-        
+
         html += `<tr>
           <td>${escapeHtml(lead.teamLead)}</td>
           <td style="text-align:center;">${escapeHtml(lead.projectCount)}</td>
@@ -649,7 +566,7 @@ export default function ReportsPage() {
   const handleShareViaEmail = () => {
     const reportHtml = generateReportHTML(activeTab);
     const subject = `ProjectPulse Report: ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} (Filtered)`;
-    
+
     let body = `Please find the ${activeTab} report attached or viewable in rich HTML format if your client supports it. This report reflects the currently applied filters.`;
     let mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
@@ -667,12 +584,12 @@ export default function ReportsPage() {
                  window.location.href = mailtoLink;
             }).catch(err => {
                 console.warn("Could not copy HTML to clipboard, falling back to simple mailto:", err);
-                if (encodeURIComponent(reportHtml).length < 1800) { 
+                if (encodeURIComponent(reportHtml).length < 1800) {
                      mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(reportHtml)}`;
                 }
                 window.location.href = mailtoLink;
             });
-        } catch(e) { 
+        } catch(e) {
             console.warn("ClipboardItem approach failed:", e);
             if (encodeURIComponent(reportHtml).length < 1800) {
                  mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(reportHtml)}`;
@@ -680,7 +597,7 @@ export default function ReportsPage() {
             window.location.href = mailtoLink;
         }
     } else {
-        if (encodeURIComponent(reportHtml).length < 1800) { 
+        if (encodeURIComponent(reportHtml).length < 1800) {
             mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(reportHtml)}`;
         } else {
              toast({
@@ -689,7 +606,7 @@ export default function ReportsPage() {
                 variant: "destructive",
                 duration: 9000,
               });
-              return; 
+              return;
         }
         window.location.href = mailtoLink;
     }
@@ -697,15 +614,15 @@ export default function ReportsPage() {
 
   const handleDownloadPDF = () => {
     const reportHtml = generateReportHTML(activeTab);
-    
+
     const printWindow = window.open('', '_blank');
     if (printWindow) {
         printWindow.document.write(reportHtml);
-        printWindow.document.close(); 
-        
+        printWindow.document.close();
+
         setTimeout(() => {
             printWindow.print();
-        }, 500); 
+        }, 500);
         toast({
             title: "Print to PDF",
             description: "Your browser's print dialog should appear. Choose 'Save as PDF' or your PDF printer.",
@@ -721,120 +638,49 @@ export default function ReportsPage() {
     }
 };
 
-
-  const MultiSelectFilter = ({ title, options, selectedValues, onValueChange }: { title: string, options: readonly string[], selectedValues: Set<string>, onValueChange: (item: string) => void }) => {
-    const [open, setOpen] = React.useState(false);
-    return (
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <FormControl>
-            <Button variant="outline" role="combobox" aria-expanded={open} className="w-full sm:w-[180px] justify-between h-9 text-xs px-3"> <div className="flex items-center">
-                <FilterIcon className="mr-1.5 h-3.5 w-3.5 shrink-0 opacity-50" /> 
-                {title}
-              </div>
-              <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" /> 
-            </Button>
-          </FormControl>
-        </PopoverTrigger>
-        <PopoverContent className="w-[200px] p-0">
-          <Command>
-            <CommandInput placeholder={`Search ${title.toLowerCase()}...`} className="text-xs h-9" /> 
-            <CommandList>
-              <CommandEmpty>No results found.</CommandEmpty>
-              <CommandGroup>
-                {options.map((option) => (
-                  <CommandItem
-                    key={option}
-                    onSelect={() => {
-                      onValueChange(option);
-                    }}
-                    className="text-xs py-1.5" >
-                    {option}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-              {selectedValues.size > 0 && (
-                <>
-                  <CommandSeparator />
-                  <CommandGroup>
-                    <CommandItem
-                      onSelect={() => {
-                        if (title === 'Status') setSelectedStatuses(new Set());
-                        if (title === 'Priority') setSelectedPriorities(new Set());
-                        if (title === 'Team Lead') setSelectedTeamLeads(new Set());
-                        if (title === 'Portfolio') setSelectedPortfolios(new Set());
-                      }}
-                      className="justify-center text-center text-xs text-muted-foreground py-1.5" >Clear selection
-                    </CommandItem>
-                  </CommandGroup>
-                </>
-              )}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
-    );
-  };
-
+const isAnyFilterActive = searchTerm !== '' || selectedStatuses.size > 0 || selectedPriorities.size > 0 || selectedTeamLeads.size > 0 || selectedPortfolios.size > 0 || dateRange?.from;
 
   return (
     <div className="container mx-auto py-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
         <div className="flex items-center">
-          <LineChartIcon className="h-7 w-7 mr-2.5 text-primary shrink-0" /> 
+          <LineChartIcon className="h-7 w-7 mr-2.5 text-primary shrink-0" />
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Advanced Reporting</h1> 
-            <p className="text-xs text-muted-foreground">Analyze project data with advanced filters, trends, and export options.</p> 
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Advanced Reporting</h1>
+            <p className="text-xs text-muted-foreground">Analyze project data with advanced filters, trends, and export options.</p>
           </div>
         </div>
-         <div className="flex gap-2 flex-wrap sm:flex-nowrap">
-            <Button onClick={() => {
-                if (activeTab === 'performance') handleDownloadPerformanceCSV();
-                else if (activeTab === 'portfolio') handleDownloadPortfolioSummariesCSV();
-                else if (activeTab === 'resources') handleDownloadTeamOverviewCSV();
-                else if (activeTab === 'trends') toast({ title: "CSV Export N/A", description: "AI predictions are best viewed online or in HTML format.", variant: "default"});
-                else toast({ title: "CSV Export", description: `CSV export is not available for this tab.`, variant: "default" });
-            }} size="sm" variant="outline" title="Download current view as CSV" className="h-9 px-3 text-xs"> 
-                <Download className="mr-1.5 h-3.5 w-3.5" /> CSV 
-            </Button>
-            <Button onClick={handleDownloadPDF} size="sm" variant="outline" title="Download current view as PDF (via Print)" className="h-9 px-3 text-xs">
-                <FileType className="mr-1.5 h-3.5 w-3.5" /> PDF
-            </Button>
-            <Button onClick={handleShareViaEmail} size="sm" variant="outline" title="Share current view via Email" className="h-9 px-3 text-xs">
-                <Mail className="mr-1.5 h-3.5 w-3.5" /> Share
-            </Button>
-        </div>
+        <ReportActions
+          activeTab={activeTab}
+          onDownloadCSV={handleDownloadCSV}
+          onDownloadPDF={handleDownloadPDF}
+          onShareViaEmail={handleShareViaEmail}
+          isFiltered={isAnyFilterActive}
+        />
       </div>
-      
-      <Card className="mb-6 shadow-md"> 
-        <CardHeader className="pb-3 pt-4 px-4"> 
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1.5"> 
-            <CardTitle className="text-md font-semibold">Filter Options</CardTitle> 
-            <Button variant="ghost" size="sm" onClick={resetFilters} className="text-xs text-muted-foreground hover:text-primary h-7 px-2"> 
-              <XCircle className="mr-1 h-3 w-3" /> Reset Filters 
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 items-end pb-4 px-4"> <Input
-            placeholder="Search projects..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-9 text-xs" 
-            prependIcon={<Search className="h-4 w-4 text-muted-foreground" />} 
-          />
-          <MultiSelectFilter title="Status" options={ALL_STATUSES} selectedValues={selectedStatuses} onValueChange={(status) => handleFilterToggle(selectedStatuses, status as ProjectStatus, setSelectedStatuses)} />
-          <MultiSelectFilter title="Priority" options={ALL_PRIORITIES} selectedValues={selectedPriorities} onValueChange={(priority) => handleFilterToggle(selectedPriorities, priority as Project['priority'], setSelectedPriorities)} />
-          <MultiSelectFilter title="Team Lead" options={uniqueTeamLeads} selectedValues={selectedTeamLeads} onValueChange={(lead) => handleFilterToggle(selectedTeamLeads, lead, setSelectedTeamLeads)} />
-          <MultiSelectFilter title="Portfolio" options={uniquePortfolios} selectedValues={selectedPortfolios} onValueChange={(portfolio) => handleFilterToggle(selectedPortfolios, portfolio, setSelectedPortfolios)} />
-          <DateRangePicker date={dateRange} onDateChange={setDateRange} buttonClassName="h-9 text-xs w-full" /> 
-        </CardContent>
-      </Card>
 
+      <ReportFilters
+        searchTerm={searchTerm}
+        onSearchTermChange={setSearchTerm}
+        selectedStatuses={selectedStatuses}
+        onSelectedStatusesChange={setSelectedStatuses}
+        selectedPriorities={selectedPriorities}
+        onSelectedPrioritiesChange={setSelectedPriorities}
+        selectedTeamLeads={selectedTeamLeads}
+        onSelectedTeamLeadsChange={setSelectedTeamLeads}
+        uniqueTeamLeads={uniqueTeamLeads}
+        selectedPortfolios={selectedPortfolios}
+        onSelectedPortfoliosChange={setSelectedPortfolios}
+        uniquePortfolios={uniquePortfolios}
+        dateRange={dateRange}
+        onDateRangeChange={setDateRange}
+        onResetFilters={resetFilters}
+      />
 
       <Tabs defaultValue="performance" className="w-full" onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
-          <TabsTrigger value="performance" className="text-xs py-2"> 
-            <ListChecks className="mr-1.5 h-3.5 w-3.5" /> Performance ({filteredProjects.length}) 
+          <TabsTrigger value="performance" className="text-xs py-2">
+            <ListChecks className="mr-1.5 h-3.5 w-3.5" /> Performance ({filteredProjects.length})
           </TabsTrigger>
           <TabsTrigger value="portfolio" className="text-xs py-2">
             <Briefcase className="mr-1.5 h-3.5 w-3.5" /> Portfolios ({portfolioSummaries.length})
@@ -847,393 +693,55 @@ export default function ReportsPage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="performance" className="mt-4"> 
-          <Card className="shadow-lg">
-            <CardHeader className="pb-3 pt-4 px-4"> 
-                <CardTitle className="text-lg">Project Performance Details</CardTitle> 
-                <CardDescription className="text-xs">Comprehensive overview of filtered projects, their status, and key metrics.</CardDescription> 
-            </CardHeader>
-            <CardContent className="pt-2 px-2 pb-2"> <ScrollArea className="h-[500px] w-full">
-                <Table>
-                  <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
-                    <TableRow>
-                      <TableHead className="w-[180px] py-2.5 px-3 text-xs whitespace-nowrap">Project Name</TableHead> 
-                      <TableHead className="py-2.5 px-3 text-xs">Status</TableHead>
-                      <TableHead className="py-2.5 px-3 text-xs">Priority</TableHead>
-                      <TableHead className="text-right py-2.5 px-3 text-xs whitespace-nowrap">Completion %</TableHead>
-                      <TableHead className="text-right py-2.5 px-3 text-xs">Budget</TableHead>
-                      <TableHead className="text-right py-2.5 px-3 text-xs">Spent</TableHead>
-                      <TableHead className="text-right py-2.5 px-3 text-xs">Variance</TableHead>
-                      <TableHead className="py-2.5 px-3 text-xs whitespace-nowrap">Start Date</TableHead>
-                      <TableHead className="py-2.5 px-3 text-xs whitespace-nowrap">End Date</TableHead>
-                      <TableHead className="py-2.5 px-3 text-xs whitespace-nowrap">Timeline</TableHead>
-                      <TableHead className="py-2.5 px-3 text-xs whitespace-nowrap">Team Lead</TableHead>
-                      <TableHead className="py-2.5 px-3 text-xs">Portfolio</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredProjects.length === 0 && (
-                        <TableRow><TableCell colSpan={12} className="h-20 text-center text-muted-foreground text-xs">No projects match the current filters.</TableCell></TableRow> 
-                    )}
-                    {filteredProjects.map(project => {
-                      const metrics = projectMetrics[project.id];
-                      const currentStatusStyles = statusStyles[project.status] || statusStyles['Planning'];
-                      const StatusIconElement = statusIcons[project.status];
-                      let daysRemainingDisplay: React.ReactNode = <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground"/>;
-                      if (!isLoadingMetrics && metrics) {
-                        if (project.status === 'Completed') {
-                          daysRemainingDisplay = <span className="text-green-600 dark:text-green-400 font-medium text-xs">Completed</span>;
-                        } else if (metrics.isOverdue) {
-                          daysRemainingDisplay = <span className="text-red-600 dark:text-red-400 font-medium text-xs">{Math.abs(metrics.daysRemaining)} days overdue</span>;
-                        } else {
-                          daysRemainingDisplay = <span className="text-muted-foreground text-xs">{metrics.daysRemaining} days left</span>;
-                        }
-                      } else if (!isLoadingMetrics) {
-                        daysRemainingDisplay = <span className="text-muted-foreground text-xs">N/A</span>;
-                      }
-
-                      return (
-                        <TableRow key={project.id} className="hover:bg-muted/30 text-xs"> 
-                          <TableCell className="font-medium text-primary py-2 px-3 whitespace-nowrap">{project.name}</TableCell> 
-                          <TableCell className="py-2 px-3">
-                            <Badge className={cn('text-xs px-2 py-0.5', currentStatusStyles.badge)} variant="outline">
-                              {StatusIconElement && <StatusIconElement className="mr-1 h-3 w-3" />}
-                              {project.status}
-                            </Badge>
-                          </TableCell>
-                           <TableCell className="py-2 px-3">
-                            <Badge variant="outline" className={cn("text-xs px-1.5 py-0.5", priorityColors[project.priority])}>
-                              {project.priority}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right py-2 px-3">
-                            <div className="flex items-center justify-end">
-                                <span className="mr-1.5 text-xs">{project.completionPercentage}%</span>
-                                <Progress value={project.completionPercentage} className="h-1.5 w-12 sm:w-16" indicatorClassName={currentStatusStyles.progress} aria-label={`${project.completionPercentage}% complete`} /> 
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right py-2 px-3">{formatCurrency(project.budget)}</TableCell>
-                          <TableCell className="text-right py-2 px-3">{formatCurrency(project.spent)}</TableCell>
-                          <TableCell className={cn("text-right py-2 px-3 font-medium", project.budget - project.spent >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
-                            {formatCurrency(project.budget - project.spent)}
-                          </TableCell>
-                          <TableCell className="py-2 px-3 text-muted-foreground whitespace-nowrap">{formatDate(project.startDate)}</TableCell>
-                          <TableCell className="py-2 px-3 text-muted-foreground whitespace-nowrap">{formatDate(project.endDate)}</TableCell>
-                          <TableCell className="py-2 px-3 whitespace-nowrap">
-                            {daysRemainingDisplay}
-                          </TableCell>
-                          <TableCell className="py-2 px-3 text-muted-foreground whitespace-nowrap">{project.teamLead}</TableCell>
-                          <TableCell className="py-2 px-3 text-muted-foreground">{project.portfolio}</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+        <TabsContent value="performance" className="mt-4">
+          <PerformanceReportTab
+            filteredProjects={filteredProjects}
+            projectMetrics={projectMetrics}
+            isLoadingMetrics={isLoadingMetrics}
+            formatCurrency={formatCurrency}
+            formatDate={formatDate}
+          />
         </TabsContent>
 
         <TabsContent value="portfolio" className="mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"> {portfolioSummaries.map(summary => (
-              <Card key={summary.portfolioName} className="shadow-lg flex flex-col">
-                <CardHeader className="pb-2 pt-4 px-4"> <CardTitle className="text-md text-primary">{summary.portfolioName}</CardTitle> <CardDescription className="text-xs">{summary.totalProjects} project{summary.totalProjects !== 1 ? 's' : ''}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2.5 flex-grow pt-2 px-4 pb-3 text-xs"> <div>
-                    <p className="font-medium text-muted-foreground mb-0.5">Avg. Completion</p>
-                    <div className="flex items-center">
-                      <Progress value={summary.averageCompletion} className="h-2 mr-2 flex-1" indicatorClassName={statusStyles['On Track'].progress} aria-label={`Average completion ${summary.averageCompletion}%`} /> 
-                      <span className="font-semibold text-foreground">{summary.averageCompletion}%</span>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="font-medium text-muted-foreground mb-0.5">Financials</p>
-                    <p className="text-xs text-muted-foreground/80">Budget: {formatCurrency(summary.totalBudget)}</p>
-                    <p className="text-xs text-muted-foreground/80">Spent: {formatCurrency(summary.totalSpent)}</p>
-                    <p className={cn("text-xs font-semibold", summary.budgetVariance >=0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
-                      Variance: {formatCurrency(summary.budgetVariance)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-muted-foreground mb-1">Status Breakdown</p>
-                    <div className="space-y-1"> {Object.entries(summary.statusCounts).map(([status, count]) =>
-                      count > 0 ? (
-                        <div key={status} className="flex justify-between items-center text-xs">
-                           <Badge className={cn('text-xs py-0.5 px-1.5 font-normal', (statusStyles[status as ProjectStatus] || statusStyles['Planning']).badge)} variant="outline">
-                             {statusIcons[status as ProjectStatus] && React.createElement(statusIcons[status as ProjectStatus], {className: "h-2.5 w-2.5 mr-1"})} 
-                             {status}
-                           </Badge>
-                          <span className="text-muted-foreground">{count} project{count > 1 ? 's' : ''}</span>
-                        </div>
-                      ) : null
-                    )}
-                    </div>
-                  </div>
-                   <Button
-                    variant="link"
-                    size="sm"
-                    className="text-xs h-auto p-0 mt-1.5 text-primary hover:text-primary/80"  onClick={() => {setSelectedPortfolioForModal(summary); setIsPortfolioModalOpen(true);}}
-                  >
-                    View Projects in Portfolio
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-             {portfolioSummaries.length === 0 && (
-                <Card className="md:col-span-2 lg:col-span-3 shadow-lg">
-                    <CardContent className="text-center py-12"> <Briefcase className="mx-auto h-10 w-10 text-muted-foreground mb-3" />  No portfolio data available for current filters.</CardContent>
-                </Card>
-            )}
-          </div>
+          <PortfolioReportTab
+            portfolioSummaries={portfolioSummaries}
+            onViewPortfolioProjects={(summary) => {
+              setSelectedPortfolioForModal(summary);
+              setIsPortfolioModalOpen(true);
+            }}
+            formatCurrency={formatCurrency}
+          />
         </TabsContent>
 
         <TabsContent value="resources" className="mt-4">
-          <Card className="shadow-lg">
-            <CardHeader className="pb-3 pt-4 px-4">
-                <CardTitle className="text-lg">Team Overview &amp; Workload</CardTitle>
-                <CardDescription className="text-xs">Breakdown of projects managed by each team lead, based on current filters.</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-2 px-2 pb-2">
-              <ScrollArea className="h-[500px] w-full">
-                <Table>
-                  <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
-                    <TableRow>
-                      <TableHead className="w-[150px] py-2.5 px-3 text-xs whitespace-nowrap">Team Lead</TableHead>
-                      <TableHead className="text-center py-2.5 px-3 text-xs whitespace-nowrap">Total Projects</TableHead>
-                      <TableHead className="text-center py-2.5 px-3 text-xs whitespace-nowrap">Active</TableHead>
-                      <TableHead className="text-center py-2.5 px-3 text-xs whitespace-nowrap">Completed</TableHead>
-                      <TableHead className="text-right py-2.5 px-3 text-xs whitespace-nowrap">Avg. Active Comp. %</TableHead>
-                      <TableHead className="text-right py-2.5 px-3 text-xs whitespace-nowrap">Total Budget ($)</TableHead>
-                      <TableHead className="py-2.5 px-3 text-xs">Active Project Statuses</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {teamLeadWorkloads.length === 0 && (
-                        <TableRow><TableCell colSpan={7} className="h-20 text-center text-muted-foreground text-xs">No team lead data for current filters.</TableCell></TableRow>
-                    )}
-                    {teamLeadWorkloads.map(lead => (
-                      <TableRow key={lead.teamLead} className="hover:bg-muted/30 text-xs">
-                        <TableCell className="font-medium py-2 px-3 whitespace-nowrap">{lead.teamLead}</TableCell>
-                        <TableCell className="text-center py-2 px-3">{lead.projectCount}</TableCell>
-                        <TableCell className="text-center py-2 px-3">{lead.activeProjectsCount}</TableCell>
-                        <TableCell className="text-center py-2 px-3">{lead.completedProjectsCount}</TableCell>
-                        <TableCell className="text-right py-2 px-3">
-                            <div className="flex items-center justify-end">
-                                <span className="mr-1.5 text-xs">{lead.averageCompletionPercentage.toFixed(1)}%</span>
-                                <Progress value={lead.averageCompletionPercentage} className="h-1.5 w-12 sm:w-16" indicatorClassName={statusStyles['On Track'].progress} aria-label={`Average active completion ${lead.averageCompletionPercentage}%`} />
-                            </div>
-                        </TableCell>
-                        <TableCell className="text-right py-2 px-3">{formatCurrency(lead.totalBudgetManaged)}</TableCell>
-                        <TableCell className="py-2 px-3">
-                          <div className="flex flex-wrap gap-1"> {Object.entries(lead.statusDistribution)
-                              .filter(([status, count]) => status !== 'Completed' && count > 0)
-                              .map(([status, count]) => {
-                                const StatusIconElement = statusIcons[status as ProjectStatus];
-                                const currentStatusStyles = statusStyles[status as ProjectStatus] || statusStyles['Planning'];
-                                return (
-                                  <TooltipProvider key={status} delayDuration={100}>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Badge className={cn('text-xs px-1.5 py-0.5', currentStatusStyles.badge)} variant="outline"> {StatusIconElement && React.createElement(StatusIconElement, {className: "h-2.5 w-2.5 mr-0.5"})} 
-                                          {count}
-                                        </Badge>
-                                      </TooltipTrigger>
-                                      <TooltipContent className="text-xs p-1 bg-popover shadow-sm rounded-sm border">
-                                        {count} {status} project{count > 1 ? 's' : ''}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                );
-                            })}
-                            {lead.activeProjectsCount === 0 && <span className="text-xs text-muted-foreground italic">No active projects</span>}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+          <ResourceReportTab
+            teamLeadWorkloads={teamLeadWorkloads}
+            formatCurrency={formatCurrency}
+          />
         </TabsContent>
 
         <TabsContent value="trends" className="mt-4">
-            <Card className="shadow-lg">
-                <CardHeader className="pb-3 pt-4 px-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle className="text-lg flex items-center">
-                                <Brain className="mr-2 h-5 w-5 text-primary" /> Trends &amp; AI Predictions
-                            </CardTitle>
-                            <CardDescription className="text-xs">
-                                Identify patterns and predict future performance with AI analysis.
-                                Results are based on the currently filtered project data.
-                            </CardDescription>
-                        </div>
-                        <Button onClick={fetchTrendsAndPredictions} disabled={isLoadingTrendsAndPredictions || filteredProjects.length === 0} size="sm" className="h-9 px-3 text-xs">
-                            {isLoadingTrendsAndPredictions ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Brain className="mr-1.5 h-3.5 w-3.5" />}
-                            {isLoadingTrendsAndPredictions ? 'Analyzing...' : 'Re-analyze with AI'}
-                        </Button>
-                    </div>
-                </CardHeader>
-                <CardContent className="pt-2 px-4 pb-4 space-y-5"> {filteredProjects.length === 0 && (
-                         <Alert variant="default" className="border-yellow-400 text-yellow-700 dark:border-yellow-500 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-900/20 p-3"> 
-                            <HelpCircle className="h-4 w-4 !text-yellow-600 dark:!text-yellow-400" />
-                            <ShadcnAlertTitle className="font-semibold text-sm">No Data for Analysis</ShadcnAlertTitle>
-                            <AlertDescription className="text-xs">
-                                There are no projects matching the current filters. Please adjust your filters to enable trend analysis and AI predictions.
-                            </AlertDescription>
-                        </Alert>
-                    )}
-                    {filteredProjects.length > 0 && (
-                        <>
-                        <Card>
-                            <CardHeader className="pb-2 pt-3 px-3">
-                                <CardTitle className="text-md flex items-center"> 
-                                    <LineChartIcon className="mr-2 h-4 w-4 text-accent" /> Calculated Trend Indicators
-                                </CardTitle>
-                                <CardDescription className="text-xs">Basic trends based on comparing older vs. newer projects in the current filtered dataset.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 px-3 pb-3"> {calculatedTrendIndicators.length === 0 && !isLoadingTrendsAndPredictions && <p className="text-xs text-muted-foreground col-span-full text-center py-3">Not enough distinct project start dates in the filtered set to calculate trends. Try broader filters.</p>}
-                                {calculatedTrendIndicators.map((indicator, idx) => (
-                                    <Card key={idx} className="bg-secondary/40 shadow-sm">
-                                        <CardHeader className="p-3 pb-1.5">  <CardTitle className="text-sm">{indicator.metricName}</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="p-3 pt-0 text-xs">
-                                            <p>Current: <span className="font-semibold">{indicator.currentValue}</span></p>
-                                            <p className={cn(
-                                                indicator.trend === 'Improving' && "text-green-600 dark:text-green-400",
-                                                indicator.trend === 'Declining' && "text-red-600 dark:text-red-400",
-                                                indicator.trend === 'Stable' && "text-muted-foreground"
-                                            )}>
-                                                Trend: {indicator.trendDescription}
-                                                {indicator.trend === 'Improving' && <TrendingUp className="inline ml-1 h-3.5 w-3.5" />}
-                                                {indicator.trend === 'Declining' && <TrendingDown className="inline ml-1 h-3.5 w-3.5" />}
-                                            </p>
-                                            {indicator.historicalComparison && <p className="text-xs text-muted-foreground">({indicator.historicalComparison})</p>}
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </CardContent>
-                        </Card>
-                    
-                        <Card>
-                            <CardHeader className="pb-2 pt-3 px-3">
-                                <CardTitle className="text-md flex items-center">
-                                    <Brain className="mr-2 h-4 w-4 text-accent" /> AI-Powered Predictions
-                                </CardTitle>
-                                 <CardDescription className="text-xs">Insights generated by AI based on the current filtered data. Confidence: High, Medium, Low.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="pt-2 px-3 pb-3">
-                                {isLoadingTrendsAndPredictions && (
-                                    <div className="flex items-center justify-center py-8">
-                                        <Loader2 className="h-6 w-6 animate-spin text-primary mr-2.5" />
-                                        <p className="text-muted-foreground text-sm">AI is analyzing data and generating predictions...</p>
-                                    </div>
-                                )}
-                                {trendsError && !isLoadingTrendsAndPredictions && (
-                                    <Alert variant="destructive" className="p-3">
-                                        <AlertTriangle className="h-4 w-4" />
-                                        <ShadcnAlertTitle className="text-sm font-semibold">Error Generating Predictions</ShadcnAlertTitle>
-                                        <AlertDescription className="text-xs">{trendsError}</AlertDescription>
-                                    </Alert>
-                                )}
-                                {!isLoadingTrendsAndPredictions && !trendsError && trendsAndPredictions && trendsAndPredictions.predictions.length > 0 && (
-                                    <div className="space-y-3"> {trendsAndPredictions.predictions.map((pred, idx) => (
-                                            <Alert key={idx} variant={'default'} 
-                                                className={cn(
-                                                    "border-l-4 p-3",
-                                                    pred.confidence === 'High' && "border-green-500 bg-green-50 dark:bg-green-900/20",
-                                                    pred.confidence === 'Medium' && "border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20",
-                                                    pred.confidence === 'Low' && "border-gray-400 bg-gray-50 dark:bg-gray-700/20"
-                                                )}
-                                            >
-                                                <div className={cn("flex items-center font-semibold mb-0.5 text-xs", 
-                                                    pred.confidence === 'High' && "text-green-700 dark:text-green-300",
-                                                    pred.confidence === 'Medium' && "text-yellow-700 dark:text-yellow-400",
-                                                    pred.confidence === 'Low' && "text-gray-600 dark:text-gray-300"
-                                                )}>
-                                                    {pred.confidence === 'High' && <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />}
-                                                    {pred.confidence === 'Medium' && <TrendingUp className="h-3.5 w-3.5 mr-1.5" />}
-                                                    {pred.confidence === 'Low' && <HelpCircle className="h-3.5 w-3.5 mr-1.5" />}
-                                                    {pred.area}: <span className="ml-1 font-normal text-foreground">{pred.prediction}</span>
-                                                </div>
-                                                {pred.suggestion && <AlertDescription className="text-xs text-muted-foreground pl-5">{pred.suggestion}</AlertDescription>} 
-                                            </Alert>
-                                        ))}
-                                    </div >
-                                )}
-                                {!isLoadingTrendsAndPredictions && !trendsError && (!trendsAndPredictions || trendsAndPredictions.predictions.length === 0) && (
-                                    <p className="text-xs text-muted-foreground text-center py-4">No specific AI predictions generated for the current data. The AI might need more distinct data or clearer trends.</p>
-                                )}
-                            </CardContent>
-                        </Card>
-                        </>
-                    )}
-                </CardContent>
-            </Card>
+           <TrendsReportTab
+              filteredProjectCount={filteredProjects.length}
+              calculatedTrendIndicators={calculatedTrendIndicators}
+              trendsAndPredictions={trendsAndPredictions}
+              isLoadingTrendsAndPredictions={isLoadingTrendsAndPredictions}
+              trendsError={trendsError}
+              onRefreshPredictions={fetchTrendsAndPredictions}
+           />
         </TabsContent>
       </Tabs>
 
-       <Dialog open={isPortfolioModalOpen} onOpenChange={setIsPortfolioModalOpen}>
-        <DialogContent className="sm:max-w-2xl md:max-w-3xl lg:max-w-4xl max-h-[80vh]">
-          <DialogHeader className="px-4 pt-4 pb-3">
-            <DialogTitle className="text-xl">Projects in: {selectedPortfolioForModal?.portfolioName}</DialogTitle>
-            <DialogDescription className="text-xs">
-              Detailed list of projects within this portfolio, reflecting current global filters.
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="h-[60vh] px-4">
-            {selectedPortfolioForModal && selectedPortfolioForModal.projects.length > 0 ? (
-              <Table>
-                <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
-                  <TableRow>
-                    <TableHead className="py-2 px-2.5 text-xs">Project Name</TableHead>
-                    <TableHead className="py-2 px-2.5 text-xs">Status</TableHead>
-                    <TableHead className="py-2 px-2.5 text-xs">Priority</TableHead>
-                    <TableHead className="text-right py-2 px-2.5 text-xs">Comp. %</TableHead>
-                    <TableHead className="text-right py-2 px-2.5 text-xs">Budget</TableHead>
-                    <TableHead className="text-right py-2 px-2.5 text-xs">Spent</TableHead>
-                    <TableHead className="py-2 px-2.5 text-xs">Team Lead</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {selectedPortfolioForModal.projects.map(project => {
-                     const currentStatusStyles = statusStyles[project.status] || statusStyles['Planning'];
-                     const StatusIconElement = statusIcons[project.status];
-                     return (
-                        <TableRow key={project.id} className="hover:bg-muted/30 text-xs">
-                          <TableCell className="font-medium text-primary py-1.5 px-2.5">{project.name}</TableCell>
-                          <TableCell className="py-1.5 px-2.5">
-                             <Badge className={cn('text-xs px-1.5 py-0.5', currentStatusStyles.badge)} variant="outline">
-                               {StatusIconElement && <StatusIconElement className="mr-1 h-2.5 w-2.5" />}
-                               {project.status}
-                             </Badge>
-                          </TableCell>
-                          <TableCell className="py-1.5 px-2.5">
-                            <Badge variant="outline" className={cn("text-xs px-1 py-0", priorityColors[project.priority])}>
-                              {project.priority}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right py-1.5 px-2.5">{project.completionPercentage}%</TableCell>
-                          <TableCell className="text-right text-xs py-1.5 px-2.5">
-                          {formatCurrency(project.budget)}</TableCell>
-                          <TableCell className="text-right text-xs py-1.5 px-2.5">{formatCurrency(project.spent)}</TableCell>
-                          <TableCell className="text-xs py-1.5 px-2.5">{project.teamLead}</TableCell>
-                        </TableRow>
-                     );
-                    })}
-                </TableBody>
-              </Table>
-            ) : (
-              <p className="text-center text-muted-foreground py-8 text-sm">No projects to display for this portfolio with current filters.</p> 
-            )}
-          </ScrollArea>
-           <DialogFooter className="px-4 pt-3 pb-4">
-             <Button variant="outline" size="sm" onClick={() => setIsPortfolioModalOpen(false)} className="h-9 text-xs">Close</Button>
-           </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PortfolioDetailModal
+        isOpen={isPortfolioModalOpen}
+        onOpenChange={setIsPortfolioModalOpen}
+        portfolioSummary={selectedPortfolioForModal}
+        formatCurrency={formatCurrency}
+        statusStyles={statusStyles}
+        priorityColors={priorityColors}
+        statusIcons={statusIcons}
+      />
     </div>
   );
 }
