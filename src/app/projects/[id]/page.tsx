@@ -24,12 +24,14 @@ import {
   Edit3,
   BarChart3,
   GanttChartSquare,
-  PieChartIcon
+  PieChartIcon,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { ProjectTimelineGantt } from '@/components/project-timeline-gantt';
 import { ProjectBudgetChart } from '@/components/project-budget-chart';
+import { useState, useEffect } from 'react';
 
 const statusIcons: Record<ProjectStatus, React.ElementType> = {
   'On Track': TrendingUp,
@@ -67,6 +69,10 @@ const milestoneStatusIcons: Record<KeyMilestone['status'], React.ElementType> = 
   'Blocked': AlertTriangle,
 };
 
+interface ClientCalculatedMetrics {
+  daysRemaining: number;
+  timelineProgress: number;
+}
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -74,6 +80,26 @@ export default function ProjectDetailPage() {
   const projectId = params.id as string;
 
   const project = mockProjects.find((p) => p.id === projectId);
+  const [clientCalculatedMetrics, setClientCalculatedMetrics] = useState<ClientCalculatedMetrics | null>(null);
+
+  useEffect(() => {
+    if (project) {
+      const now = new Date();
+      const endDate = parseISO(project.endDate);
+      const startDate = parseISO(project.startDate);
+
+      const daysRemaining = differenceInDays(endDate, now);
+      const totalProjectDuration = differenceInDays(endDate, startDate);
+      const daysPassed = Math.max(0, differenceInDays(now, startDate));
+      const timelineProgress = totalProjectDuration > 0 ? Math.min(100, Math.max(0, (daysPassed / totalProjectDuration) * 100)) : 0;
+      
+      setClientCalculatedMetrics({
+        daysRemaining,
+        timelineProgress,
+      });
+    }
+  }, [project]);
+
 
   if (!project) {
     return (
@@ -97,12 +123,6 @@ export default function ProjectDetailPage() {
       return 'N/A';
     }
   };
-
-  const daysRemaining = differenceInDays(parseISO(project.endDate), new Date());
-  const totalProjectDuration = differenceInDays(parseISO(project.endDate), parseISO(project.startDate));
-  const daysPassed = Math.max(0, differenceInDays(new Date(), parseISO(project.startDate)));
-  const timelineProgress = totalProjectDuration > 0 ? Math.min(100, Math.max(0, (daysPassed / totalProjectDuration) * 100)) : 0;
-
 
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -141,11 +161,19 @@ export default function ProjectDetailPage() {
            <div>
             <div className="mb-1 flex justify-between text-sm text-muted-foreground">
               <span>Timeline Progress</span>
-               <span>
-                {daysRemaining >=0 ? `${daysRemaining} days remaining` : `${Math.abs(daysRemaining)} days overdue`}
-                </span>
+               {clientCalculatedMetrics ? (
+                 <span>
+                  {clientCalculatedMetrics.daysRemaining >=0 ? `${clientCalculatedMetrics.daysRemaining} days remaining` : `${Math.abs(clientCalculatedMetrics.daysRemaining)} days overdue`}
+                  </span>
+               ) : (
+                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+               )}
             </div>
-            <Progress value={timelineProgress} aria-label={`Timeline ${timelineProgress}% complete`} className="h-3" indicatorClassName={daysRemaining < 0 && project.status !== 'Completed' ? 'bg-red-500' : ''} />
+            {clientCalculatedMetrics ? (
+              <Progress value={clientCalculatedMetrics.timelineProgress} aria-label={`Timeline ${clientCalculatedMetrics.timelineProgress}% complete`} className="h-3" indicatorClassName={clientCalculatedMetrics.daysRemaining < 0 && project.status !== 'Completed' ? 'bg-red-500' : ''} />
+            ) : (
+              <Progress value={0} aria-label="Loading timeline progress" className="h-3" />
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
@@ -277,3 +305,4 @@ export default function ProjectDetailPage() {
     </div>
   );
 }
+
