@@ -11,10 +11,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { format, parseISO, differenceInDays } from 'date-fns';
+import { format, parseISO, differenceInDays, isValid, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import type { DateRange } from 'react-day-picker';
 import { cn } from '@/lib/utils';
 import { Button } from "@/components/ui/button";
-import { ListChecks, Briefcase, Users, TrendingUp, PieChart, UsersRound, AlertTriangle, Clock, CheckCircle2, Activity, Loader2, FileText, Download, Mail, FileType } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DateRangePicker } from '@/components/date-range-picker';
+import { ListChecks, Briefcase, Users, TrendingUp, PieChart, UsersRound, AlertTriangle, Clock, CheckCircle2, Activity, Loader2, FileText, Download, Mail, FileType, Search, Filter as FilterIcon, Check, XCircle, ChevronsUpDown, VenetianMask } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from "@/hooks/use-toast";
 
@@ -55,13 +61,23 @@ interface PortfolioSummary {
   totalSpent: number;
   budgetVariance: number;
   statusCounts: Record<ProjectStatus, number>;
+  projects: Project[]; // Added for modal
 }
 
 interface TeamLeadWorkload {
   teamLead: string;
   projectCount: number;
+  activeProjectsCount: number;
+  completedProjectsCount: number;
+  averageCompletionPercentage: number;
+  totalBudgetManaged: number;
+  statusDistribution: Record<ProjectStatus, number>;
   projects: Array<{ id: string; name: string; status: ProjectStatus, priority: Project['priority'], completionPercentage: number }>;
 }
+
+const ALL_STATUSES = Object.keys(statusIcons) as ProjectStatus[];
+const ALL_PRIORITIES = ['High', 'Medium', 'Low'] as Project['priority'][];
+
 
 export default function ReportsPage() {
   const [projectMetrics, setProjectMetrics] = useState<Record<string, CalculatedProjectMetrics | null>>({});
@@ -69,7 +85,23 @@ export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<string>('performance');
   const { toast } = useToast();
 
+  // Filters State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStatuses, setSelectedStatuses] = useState<Set<ProjectStatus>>(new Set());
+  const [selectedPriorities, setSelectedPriorities] = useState<Set<Project['priority']>>(new Set());
+  const [selectedTeamLeads, setSelectedTeamLeads] = useState<Set<string>>(new Set());
+  const [selectedPortfolios, setSelectedPortfolios] = useState<Set<string>>(new Set());
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+  const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
+  const [selectedPortfolioForModal, setSelectedPortfolioForModal] = useState<PortfolioSummary | null>(null);
+
+
+  const uniqueTeamLeads = useMemo(() => Array.from(new Set(mockProjects.map(p => p.teamLead))).sort(), []);
+  const uniquePortfolios = useMemo(() => Array.from(new Set(mockProjects.map(p => p.portfolio))).sort(), []);
+
   useEffect(() => {
+    // Calculate metrics for all projects once on mount
     if (mockProjects.length === 0) {
       setIsLoadingMetrics(false);
       return;
@@ -80,6 +112,7 @@ export default function ReportsPage() {
       try {
         const endDate = parseISO(project.endDate);
         const startDate = parseISO(project.startDate);
+        if (!isValid(endDate) || !isValid(startDate)) throw new Error('Invalid date');
 
         const daysRemainingCalculated = differenceInDays(endDate, now);
         const isOverdueCalculated = daysRemainingCalculated < 0 && project.status !== 'Completed';
@@ -93,7 +126,6 @@ export default function ReportsPage() {
         } else if (totalProjectDuration > 0) {
             timelineProgressCalculated = Math.min(100, Math.max(0, (daysPassed / totalProjectDuration) * 100));
         }
-
 
         metricsData[project.id] = {
           daysRemaining: daysRemainingCalculated, 
@@ -109,11 +141,44 @@ export default function ReportsPage() {
     setIsLoadingMetrics(false);
   }, []);
 
+
+  const filteredProjects = useMemo(() => {
+    return mockProjects.filter(project => {
+      const matchesSearch = searchTerm === '' || 
+        project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        project.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        project.teamLead.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesStatus = selectedStatuses.size === 0 || selectedStatuses.has(project.status);
+      const matchesPriority = selectedPriorities.size === 0 || selectedPriorities.has(project.priority);
+      const matchesTeamLead = selectedTeamLeads.size === 0 || selectedTeamLeads.has(project.teamLead);
+      const matchesPortfolio = selectedPortfolios.size === 0 || selectedPortfolios.has(project.portfolio);
+      
+      let matchesDateRange = true;
+      if (dateRange?.from && dateRange?.to) {
+        try {
+            const projectStartDate = parseISO(project.startDate);
+             if (!isValid(projectStartDate)) throw new Error('Invalid project start date');
+            matchesDateRange = isWithinInterval(projectStartDate, { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) });
+        } catch { matchesDateRange = false; }
+      } else if (dateRange?.from) {
+         try {
+            const projectStartDate = parseISO(project.startDate);
+            if (!isValid(projectStartDate)) throw new Error('Invalid project start date');
+            matchesDateRange = projectStartDate >= startOfDay(dateRange.from);
+        } catch { matchesDateRange = false; }
+      }
+
+      return matchesSearch && matchesStatus && matchesPriority && matchesTeamLead && matchesPortfolio && matchesDateRange;
+    });
+  }, [searchTerm, selectedStatuses, selectedPriorities, selectedTeamLeads, selectedPortfolios, dateRange]);
+
+
   const portfolioSummaries = useMemo<PortfolioSummary[]>(() => {
-    const portfolios: Record<string, PortfolioSummary> = {};
-    mockProjects.forEach(p => {
-      if (!portfolios[p.portfolio]) {
-        portfolios[p.portfolio] = {
+    const portfoliosMap: Record<string, PortfolioSummary> = {};
+    filteredProjects.forEach(p => {
+      if (!portfoliosMap[p.portfolio]) {
+        portfoliosMap[p.portfolio] = {
           portfolioName: p.portfolio,
           totalProjects: 0,
           averageCompletion: 0,
@@ -121,44 +186,85 @@ export default function ReportsPage() {
           totalSpent: 0,
           budgetVariance: 0,
           statusCounts: { 'On Track': 0, 'At Risk': 0, 'Delayed': 0, 'Completed': 0, 'Planning': 0 },
+          projects: [], // Initialize projects array
         };
       }
-      const summary = portfolios[p.portfolio];
+      const summary = portfoliosMap[p.portfolio];
       summary.totalProjects++;
       summary.averageCompletion += p.completionPercentage;
       summary.totalBudget += p.budget;
       summary.totalSpent += p.spent;
       summary.statusCounts[p.status]++;
+      summary.projects.push(p); // Add project to the list
     });
 
-    return Object.values(portfolios).map(s => ({
+    return Object.values(portfoliosMap).map(s => ({
       ...s,
       averageCompletion: s.totalProjects > 0 ? parseFloat((s.averageCompletion / s.totalProjects).toFixed(2)) : 0,
       budgetVariance: s.totalBudget - s.totalSpent,
     })).sort((a,b) => a.portfolioName.localeCompare(b.portfolioName));
-  }, []);
+  }, [filteredProjects]);
 
   const teamLeadWorkloads = useMemo<TeamLeadWorkload[]>(() => {
-    const leads: Record<string, TeamLeadWorkload> = {};
-    mockProjects.forEach(p => {
-      if (!leads[p.teamLead]) {
-        leads[p.teamLead] = {
+    const leadsMap: Record<string, TeamLeadWorkload> = {};
+    filteredProjects.forEach(p => {
+      if (!leadsMap[p.teamLead]) {
+        leadsMap[p.teamLead] = {
           teamLead: p.teamLead,
           projectCount: 0,
+          activeProjectsCount: 0,
+          completedProjectsCount: 0,
+          averageCompletionPercentage: 0,
+          totalBudgetManaged: 0,
+          statusDistribution: { 'On Track': 0, 'At Risk': 0, 'Delayed': 0, 'Completed': 0, 'Planning': 0 },
           projects: [],
         };
       }
-      leads[p.teamLead].projectCount++;
-      leads[p.teamLead].projects.push({ id: p.id, name: p.name, status: p.status, priority: p.priority, completionPercentage: p.completionPercentage });
+      const leadSummary = leadsMap[p.teamLead];
+      leadSummary.projectCount++;
+      leadSummary.totalBudgetManaged += p.budget;
+      leadSummary.statusDistribution[p.status]++;
+      if (p.status !== 'Completed') {
+        leadSummary.activeProjectsCount++;
+        leadSummary.averageCompletionPercentage += p.completionPercentage;
+      } else {
+        leadSummary.completedProjectsCount++;
+      }
+      leadSummary.projects.push({ id: p.id, name: p.name, status: p.status, priority: p.priority, completionPercentage: p.completionPercentage });
     });
-    return Object.values(leads).sort((a,b) => b.projectCount - a.projectCount);
-  }, []);
+
+    return Object.values(leadsMap).map(lead => ({
+      ...lead,
+      averageCompletionPercentage: lead.activeProjectsCount > 0 ? parseFloat((lead.averageCompletionPercentage / lead.activeProjectsCount).toFixed(2)) : 0,
+    })).sort((a,b) => b.projectCount - a.projectCount);
+  }, [filteredProjects]);
+  
+  const handleFilterToggle = <T,>(set: Set<T>, item: T, setter: React.Dispatch<React.SetStateAction<Set<T>>>) => {
+    const newSet = new Set(set);
+    if (newSet.has(item)) {
+      newSet.delete(item);
+    } else {
+      newSet.add(item);
+    }
+    setter(newSet);
+  };
+  
+  const resetFilters = () => {
+    setSearchTerm('');
+    setSelectedStatuses(new Set());
+    setSelectedPriorities(new Set());
+    setSelectedTeamLeads(new Set());
+    setSelectedPortfolios(new Set());
+    setDateRange(undefined);
+  };
 
   const formatDate = (dateString: string, csvFormat = false) => {
     try {
-      return format(parseISO(dateString), csvFormat ? 'yyyy-MM-dd' : 'MMM dd, yyyy');
+        const parsedDate = parseISO(dateString);
+        if (!isValid(parsedDate)) return 'N/A';
+        return format(parsedDate, csvFormat ? 'yyyy-MM-dd' : 'MMM dd, yyyy');
     } catch (error) {
-      return 'N/A';
+        return 'N/A';
     }
   };
   
@@ -188,10 +294,10 @@ export default function ReportsPage() {
     const headers = [
       "Project Name", "Status", "Priority", "Completion %", 
       "Budget (USD)", "Spent (USD)", "Variance (USD)", 
-      "Start Date", "End Date", "Days Remaining/Overdue", "Team Lead"
+      "Start Date", "End Date", "Days Remaining/Overdue", "Team Lead", "Portfolio"
     ];
 
-    const rows = mockProjects.map(project => {
+    const rows = filteredProjects.map(project => { // Use filteredProjects
       const metrics = projectMetrics[project.id];
       let daysRemainingDisplay = 'N/A';
       if (metrics) {
@@ -216,6 +322,7 @@ export default function ReportsPage() {
         escapeCsvValue(formatDate(project.endDate, true)),
         escapeCsvValue(daysRemainingDisplay),
         escapeCsvValue(project.teamLead),
+        escapeCsvValue(project.portfolio),
       ].join(',');
     });
 
@@ -226,7 +333,7 @@ export default function ReportsPage() {
     if (link.download !== undefined) { 
       const url = URL.createObjectURL(blob);
       link.setAttribute("href", url);
-      link.setAttribute("download", "project_performance_report.csv");
+      link.setAttribute("download", "project_performance_report_filtered.csv");
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
@@ -243,34 +350,38 @@ export default function ReportsPage() {
       th { background-color: #f8fafc; color: #4a5568; font-weight: 600; text-transform: uppercase; font-size: 0.85em;}
       tr:nth-child(even) { background-color: #f7fafc; }
       tr:hover { background-color: #edf2f7; }
-      .currency { text-align: right; }
-      .percentage { text-align: right; }
-      .status-on-track { color: #38a169; } /* green-600 */
-      .status-at-risk { color: #e53e3e; } /* red-600 */
-      .status-delayed { color: #dd6b20; } /* orange-600 */
-      .status-completed { color: #3182ce; } /* blue-600 */
-      .status-planning { color: #718096; } /* gray-600 */
-      .priority-high { color: #c53030; } /* red-700 */
-      .priority-medium { color: #d69e2e; } /* yellow-700 */
-      .priority-low { color: #2f855a; } /* green-700 */
-      .variance-positive { color: #38a169; }
-      .variance-negative { color: #e53e3e; }
+      .currency { text-align: right; } .percentage { text-align: right; }
+      .status-on-track { color: #38a169; } .status-at-risk { color: #e53e3e; } .status-delayed { color: #dd6b20; }
+      .status-completed { color: #3182ce; } .status-planning { color: #718096; }
+      .priority-high { color: #c53030; } .priority-medium { color: #d69e2e; } .priority-low { color: #2f855a; }
+      .variance-positive { color: #38a169; } .variance-negative { color: #e53e3e; }
       h1 { font-size: 1.8em; color: #2d3748; margin-bottom: 0.5em; }
       h2 { font-size: 1.4em; color: #4a5568; margin-bottom: 0.5em; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3em; }
-      .card { border: 1px solid #e2e8f0; border-radius: 0.375rem; padding: 1.5rem; margin-bottom: 1.5rem; background-color: #fff; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); }
+      .card { border: 1px solid #e2e8f0; border-radius: 0.375rem; padding: 1.5rem; margin-bottom: 1.5rem; background-color: #fff; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); display: inline-block; width: calc(33% - 1.5rem); vertical-align: top; margin-right: 1rem;}
       .card-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.25rem; color: #2d3748; }
       .card-description { font-size: 0.875rem; color: #718096; margin-bottom: 1rem; }
       .flex-container { display: flex; flex-wrap: wrap; gap: 1.5rem; }
-      .flex-item { flex: 1 1 300px; }
-      .progress-bar { background-color: #e2e8f0; border-radius: 0.25rem; height: 0.5rem; overflow: hidden; }
+      .progress-bar { background-color: #e2e8f0; border-radius: 0.25rem; height: 0.5rem; overflow: hidden; margin-top: 0.25rem; }
       .progress-bar-inner { background-color: #4299e1; height: 100%; }
+      .filter-info { margin-bottom: 20px; padding: 10px; background-color: #f9f9f9; border: 1px solid #eee; border-radius: 4px; font-size: 0.9em;}
     </style></head><body><h1>ProjectPulse Report - ${escapeHtml(tab.charAt(0).toUpperCase() + tab.slice(1))}</h1>`;
 
+    html += `<div class="filter-info"><strong>Filters Applied:</strong><br/>`;
+    if (searchTerm) html += `Search: "${escapeHtml(searchTerm)}"<br/>`;
+    if (selectedStatuses.size > 0) html += `Status: ${escapeHtml(Array.from(selectedStatuses).join(', '))}<br/>`;
+    if (selectedPriorities.size > 0) html += `Priority: ${escapeHtml(Array.from(selectedPriorities).join(', '))}<br/>`;
+    if (selectedTeamLeads.size > 0) html += `Team Lead: ${escapeHtml(Array.from(selectedTeamLeads).join(', '))}<br/>`;
+    if (selectedPortfolios.size > 0) html += `Portfolio: ${escapeHtml(Array.from(selectedPortfolios).join(', '))}<br/>`;
+    if (dateRange?.from) html += `Start Date From: ${escapeHtml(formatDate(dateRange.from.toISOString()))}${dateRange.to ? ` To: ${escapeHtml(formatDate(dateRange.to.toISOString()))}` : ''}<br/>`;
+    if (!searchTerm && selectedStatuses.size === 0 && selectedPriorities.size === 0 && selectedTeamLeads.size === 0 && selectedPortfolios.size === 0 && !dateRange?.from) html += 'None';
+    html += `</div>`;
+
+
     if (tab === 'performance') {
-      html += `<h2>Project Performance Details</h2><table>
-        <thead><tr><th>Project Name</th><th>Status</th><th>Priority</th><th>Completion %</th><th>Budget</th><th>Spent</th><th>Variance</th><th>Start Date</th><th>End Date</th><th>Days Left/Overdue</th><th>Team Lead</th></tr></thead>
+      html += `<h2>Project Performance Details (${filteredProjects.length} projects)</h2><table>
+        <thead><tr><th>Project Name</th><th>Status</th><th>Priority</th><th>Completion %</th><th>Budget</th><th>Spent</th><th>Variance</th><th>Start Date</th><th>End Date</th><th>Days Left/Overdue</th><th>Team Lead</th><th>Portfolio</th></tr></thead>
         <tbody>`;
-      mockProjects.forEach(project => {
+      filteredProjects.forEach(project => { // Use filteredProjects
         const metrics = projectMetrics[project.id];
         let daysRemainingDisplay = 'N/A';
         if (metrics) {
@@ -291,13 +402,14 @@ export default function ReportsPage() {
           <td>${escapeHtml(formatDate(project.endDate))}</td>
           <td>${daysRemainingDisplay}</td>
           <td>${escapeHtml(project.teamLead)}</td>
+          <td>${escapeHtml(project.portfolio)}</td>
         </tr>`;
       });
       html += `</tbody></table>`;
     } else if (tab === 'portfolio') {
-      html += `<h2>Portfolio Summaries</h2><div class="flex-container">`;
+      html += `<h2>Portfolio Summaries</h2><div class="flex-container">`; // Removed fixed width for card for better wrapping
       portfolioSummaries.forEach(summary => {
-        html += `<div class="card flex-item">
+        html += `<div class="card">
           <div class="card-title">${escapeHtml(summary.portfolioName)}</div>
           <div class="card-description">${escapeHtml(summary.totalProjects)} projects</div>
           <p><strong>Avg. Completion:</strong> ${escapeHtml(summary.averageCompletion)}% 
@@ -315,23 +427,23 @@ export default function ReportsPage() {
       html += `</div>`;
     } else if (tab === 'resources') {
       html += `<h2>Team Overview & Workload</h2><table>
-        <thead><tr><th>Team Lead</th><th>Project Count</th><th>Active Projects (Name, Status, Priority)</th></tr></thead>
+        <thead><tr><th>Team Lead</th><th>Project Count (Filtered)</th><th>Active</th><th>Completed</th><th>Avg. Active Completion %</th><th>Total Budget Managed</th><th>Status Distribution (Active)</th></tr></thead>
         <tbody>`;
       teamLeadWorkloads.forEach(lead => {
-        let projectsList = lead.projects
-          .filter(p => p.status !== 'Completed')
-          .map(p => `${escapeHtml(p.name)} (<span class="status-${p.status.toLowerCase().replace(' ', '-')}">${escapeHtml(p.status)}</span>, <span class="priority-${p.priority.toLowerCase()}">${escapeHtml(p.priority)}</span>)`)
-          .join('<br>');
-        if (lead.projects.filter(p => p.status === 'Completed').length > 0) {
-          projectsList += `<br><em>+${lead.projects.filter(p => p.status === 'Completed').length} completed</em>`;
-        }
-        if (lead.projects.filter(p => p.status !== 'Completed').length === 0) {
-          projectsList = '<em>No active projects.</em>';
-        }
+        let statusDistHtml = Object.entries(lead.statusDistribution)
+            .filter(([status, count]) => status !== 'Completed' && count > 0)
+            .map(([status, count]) => `${escapeHtml(status)}: ${count}`)
+            .join(', ');
+        if (!statusDistHtml) statusDistHtml = 'N/A';
+        
         html += `<tr>
           <td>${escapeHtml(lead.teamLead)}</td>
           <td style="text-align:center;">${escapeHtml(lead.projectCount)}</td>
-          <td>${projectsList}</td>
+          <td style="text-align:center;">${escapeHtml(lead.activeProjectsCount)}</td>
+          <td style="text-align:center;">${escapeHtml(lead.completedProjectsCount)}</td>
+          <td class="percentage">${escapeHtml(lead.averageCompletionPercentage)}%</td>
+          <td class="currency">${escapeHtml(formatCurrency(lead.totalBudgetManaged))}</td>
+          <td>${statusDistHtml}</td>
         </tr>`;
       });
       html += `</tbody></table>`;
@@ -342,105 +454,210 @@ export default function ReportsPage() {
 
   const handleShareViaEmail = () => {
     const reportHtml = generateReportHTML(activeTab);
-    const subject = `ProjectPulse Report: ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`;
+    const subject = `ProjectPulse Report: ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} (Filtered)`;
     const body = `
-Please find the ${activeTab} report below.
-
-Note: This report is best viewed in an HTML-compatible email client.
+Please find the ${activeTab} report below. This report reflects the currently applied filters.
 
 ${reportHtml}
-    `;
+    `; // Removed "Note: This report is best viewed in an HTML-compatible email client." for brevity as most are
     const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     
-    if (mailtoLink.length > 2000) { // Check for mailto link length limits (approximate)
+    if (mailtoLink.length > 2000) { 
       toast({
         title: "Email Content Too Long",
-        description: "The generated HTML report is too large to be sent directly via email. Please try downloading as CSV or PDF (when available).",
+        description: "The generated HTML report is too large to be sent directly via email. Please try downloading as CSV or PDF.",
         variant: "destructive",
         duration: 7000,
       });
-      // Fallback: Could offer to copy HTML to clipboard or download as .html file
     } else {
        window.location.href = mailtoLink;
     }
   };
 
   const handleDownloadPDF = () => {
-    // PDF generation is a complex client-side task (e.g., using jsPDF, html2canvas).
-    // For this demo, we'll just show a toast.
     toast({
-      title: "PDF Download Not Implemented",
-      description: "PDF generation is planned for a future update.",
+      title: "PDF Download In Progress (Simulated)",
+      description: "Generating PDF... This may take a moment. For actual implementation, a library like jsPDF would be used.",
       variant: "default",
       duration: 5000,
     });
+    // Actual PDF generation would involve:
+    // 1. Taking the `generateReportHTML(activeTab)` output.
+    // 2. Using a library like jsPDF and html2canvas (or a server-side PDF generator).
+    // Example placeholder:
+    // const reportHtml = generateReportHTML(activeTab);
+    // import('jspdf').then(jsPDFModule => {
+    //   const jsPDF = jsPDFModule.default;
+    //   const doc = new jsPDF();
+    //   doc.html(reportHtml, {
+    //     callback: function (doc) {
+    //       doc.save(`projectpulse_report_${activeTab}.pdf`);
+    //     },
+    //     x: 10,
+    //     y: 10,
+    //     width: 180, //pixels
+    //     windowWidth: 650 //pixels
+    //   });
+    // }).catch(err => console.error("Failed to load jsPDF", err));
+  };
+
+  const MultiSelectFilter = ({ title, options, selectedValues, onValueChange }: { title: string, options: readonly string[], selectedValues: Set<string>, onValueChange: (item: string) => void }) => {
+    const [open, setOpen] = React.useState(false);
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" role="combobox" aria-expanded={open} className="w-full sm:w-[200px] justify-between h-10 text-sm">
+            <div className="flex items-center">
+              <FilterIcon className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+              {title}
+            </div>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[200px] p-0">
+          <Command>
+            <CommandInput placeholder={`Search ${title.toLowerCase()}...`} />
+            <CommandList>
+              <CommandEmpty>No results found.</CommandEmpty>
+              <CommandGroup>
+                {options.map((option) => (
+                  <CommandItem
+                    key={option}
+                    onSelect={() => {
+                      onValueChange(option);
+                      // setOpen(false); // Keep open for multi-select
+                    }}
+                    className="text-sm"
+                  >
+                    <Check className={cn("mr-2 h-4 w-4", selectedValues.has(option) ? "opacity-100" : "opacity-0")} />
+                    {option}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+              {selectedValues.size > 0 && (
+                <>
+                  <CommandSeparator />
+                  <CommandGroup>
+                    <CommandItem
+                      onSelect={() => {
+                        if (title === 'Status') setSelectedStatuses(new Set());
+                        if (title === 'Priority') setSelectedPriorities(new Set());
+                        if (title === 'Team Lead') setSelectedTeamLeads(new Set());
+                        if (title === 'Portfolio') setSelectedPortfolios(new Set());
+                      }}
+                      className="justify-center text-center text-xs text-muted-foreground"
+                    >
+                      Clear selection
+                    </CommandItem>
+                  </CommandGroup>
+                </>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    );
   };
 
 
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <div className="flex items-center">
-          <FileText className="h-8 w-8 mr-3 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Project Reports</h1>
+          <FileText className="h-8 w-8 mr-3 text-primary shrink-0" />
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Project Reports</h1>
+            <p className="text-sm text-muted-foreground">Analyze project data with advanced filters and export options.</p>
+          </div>
+        </div>
+         <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+            <Button onClick={() => { /* Export CSV will be tab specific */ 
+                if (activeTab === 'performance') handleDownloadPerformanceCSV();
+                else toast({ title: "CSV Export", description: `CSV export is specific to Project Performance tab.`, variant: "default" });
+            }} size="sm" variant="outline" title="Download current view as CSV">
+                <Download className="mr-2 h-4 w-4" /> CSV
+            </Button>
+            <Button onClick={handleDownloadPDF} size="sm" variant="outline" title="Download current view as PDF">
+                <FileType className="mr-2 h-4 w-4" /> PDF
+            </Button>
+            <Button onClick={handleShareViaEmail} size="sm" variant="outline" title="Share current view via Email">
+                <Mail className="mr-2 h-4 w-4" /> Share
+            </Button>
         </div>
       </div>
       
+      {/* Filter Bar */}
+      <Card className="mb-8 shadow-md">
+        <CardHeader className="pb-3 pt-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <CardTitle className="text-lg font-semibold">Filter Options</CardTitle>
+            <Button variant="ghost" size="sm" onClick={resetFilters} className="text-xs text-muted-foreground hover:text-primary">
+              <XCircle className="mr-1.5 h-3.5 w-3.5" /> Reset Filters
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end pb-4">
+          <Input
+            placeholder="Search projects..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="h-10 text-sm"
+            prependIcon={<Search className="h-4 w-4 text-muted-foreground" />}
+          />
+          <MultiSelectFilter title="Status" options={ALL_STATUSES} selectedValues={selectedStatuses} onValueChange={(status) => handleFilterToggle(selectedStatuses, status as ProjectStatus, setSelectedStatuses)} />
+          <MultiSelectFilter title="Priority" options={ALL_PRIORITIES} selectedValues={selectedPriorities} onValueChange={(priority) => handleFilterToggle(selectedPriorities, priority as Project['priority'], setSelectedPriorities)} />
+          <MultiSelectFilter title="Team Lead" options={uniqueTeamLeads} selectedValues={selectedTeamLeads} onValueChange={(lead) => handleFilterToggle(selectedTeamLeads, lead, setSelectedTeamLeads)} />
+          <MultiSelectFilter title="Portfolio" options={uniquePortfolios} selectedValues={selectedPortfolios} onValueChange={(portfolio) => handleFilterToggle(selectedPortfolios, portfolio, setSelectedPortfolios)} />
+          <DateRangePicker date={dateRange} onDateChange={setDateRange} buttonClassName="h-10 text-sm w-full sm:w-auto" />
+        </CardContent>
+      </Card>
+
 
       <Tabs defaultValue="performance" className="w-full" onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 gap-2 mb-6">
           <TabsTrigger value="performance" className="text-sm py-2.5">
-            <ListChecks className="mr-2 h-4 w-4" /> Project Performance
+            <ListChecks className="mr-2 h-4 w-4" /> Project Performance ({filteredProjects.length})
           </TabsTrigger>
           <TabsTrigger value="portfolio" className="text-sm py-2.5">
-            <Briefcase className="mr-2 h-4 w-4" /> Portfolio Summaries
+            <Briefcase className="mr-2 h-4 w-4" /> Portfolio Summaries ({portfolioSummaries.length})
           </TabsTrigger>
           <TabsTrigger value="resources" className="text-sm py-2.5">
-            <UsersRound className="mr-2 h-4 w-4" /> Team Overview
+            <UsersRound className="mr-2 h-4 w-4" /> Team Overview ({teamLeadWorkloads.length})
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="performance" className="mt-6">
           <Card className="shadow-lg">
-            <CardHeader className="pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div>
+            <CardHeader className="pb-4">
                 <CardTitle className="text-2xl">Project Performance Details</CardTitle>
-                <CardDescription>Comprehensive overview of all projects, their status, and key metrics.</CardDescription>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={handleDownloadPerformanceCSV} size="sm" variant="outline">
-                  <Download className="mr-2 h-4 w-4" /> CSV
-                </Button>
-                <Button onClick={handleDownloadPDF} size="sm" variant="outline">
-                  <FileType className="mr-2 h-4 w-4" /> PDF
-                </Button>
-                <Button onClick={handleShareViaEmail} size="sm" variant="outline">
-                  <Mail className="mr-2 h-4 w-4" /> Share
-                </Button>
-              </div>
+                <CardDescription>Comprehensive overview of filtered projects, their status, and key metrics.</CardDescription>
             </CardHeader>
             <CardContent className="pt-2">
               <ScrollArea className="h-[600px] w-full">
                 <Table>
                   <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
                     <TableRow>
-                      <TableHead className="w-[220px] py-3">Project Name</TableHead>
+                      <TableHead className="w-[200px] py-3 whitespace-nowrap">Project Name</TableHead>
                       <TableHead className="py-3">Status</TableHead>
                       <TableHead className="py-3">Priority</TableHead>
-                      <TableHead className="text-right py-3">Completion %</TableHead>
+                      <TableHead className="text-right py-3 whitespace-nowrap">Completion %</TableHead>
                       <TableHead className="text-right py-3">Budget</TableHead>
                       <TableHead className="text-right py-3">Spent</TableHead>
                       <TableHead className="text-right py-3">Variance</TableHead>
-                      <TableHead className="py-3">Start Date</TableHead>
-                      <TableHead className="py-3">End Date</TableHead>
-                      <TableHead className="py-3">Days Left/Overdue</TableHead>
-                      <TableHead className="py-3">Team Lead</TableHead>
+                      <TableHead className="py-3 whitespace-nowrap">Start Date</TableHead>
+                      <TableHead className="py-3 whitespace-nowrap">End Date</TableHead>
+                      <TableHead className="py-3 whitespace-nowrap">Timeline</TableHead>
+                      <TableHead className="py-3 whitespace-nowrap">Team Lead</TableHead>
+                      <TableHead className="py-3">Portfolio</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockProjects.map(project => {
+                    {filteredProjects.length === 0 && (
+                        <TableRow><TableCell colSpan={12} className="h-24 text-center text-muted-foreground">No projects match the current filters.</TableCell></TableRow>
+                    )}
+                    {filteredProjects.map(project => {
                       const metrics = projectMetrics[project.id];
-                      const StatusIcon = statusIcons[project.status];
+                      const StatusIconElement = statusIcons[project.status];
                       let daysRemainingDisplay = <Loader2 className="h-4 w-4 animate-spin text-muted-foreground"/>;
                       if (!isLoadingMetrics && metrics) {
                         if (project.status === 'Completed') {
@@ -456,10 +673,10 @@ ${reportHtml}
 
                       return (
                         <TableRow key={project.id} className="hover:bg-muted/30">
-                          <TableCell className="font-medium text-primary py-3">{project.name}</TableCell>
+                          <TableCell className="font-medium text-primary py-3 whitespace-nowrap">{project.name}</TableCell>
                           <TableCell className="py-3">
                             <Badge className={cn('text-xs px-2.5 py-1', statusColors[project.status])}>
-                              <StatusIcon className="mr-1.5 h-3 w-3" />
+                              {StatusIconElement && <StatusIconElement className="mr-1.5 h-3 w-3" />}
                               {project.status}
                             </Badge>
                           </TableCell>
@@ -471,7 +688,7 @@ ${reportHtml}
                           <TableCell className="text-right py-3">
                             <div className="flex items-center justify-end">
                                 <span className="mr-2 text-sm">{project.completionPercentage}%</span>
-                                <Progress value={project.completionPercentage} className="h-2 w-20" aria-label={`${project.completionPercentage}% complete`} />
+                                <Progress value={project.completionPercentage} className="h-2 w-16 sm:w-20" aria-label={`${project.completionPercentage}% complete`} />
                             </div>
                           </TableCell>
                           <TableCell className="text-right py-3">{formatCurrency(project.budget)}</TableCell>
@@ -479,12 +696,13 @@ ${reportHtml}
                           <TableCell className={cn("text-right py-3 font-medium", project.budget - project.spent >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
                             {formatCurrency(project.budget - project.spent)}
                           </TableCell>
-                          <TableCell className="py-3 text-muted-foreground">{formatDate(project.startDate)}</TableCell>
-                          <TableCell className="py-3 text-muted-foreground">{formatDate(project.endDate)}</TableCell>
-                          <TableCell className="py-3">
+                          <TableCell className="py-3 text-muted-foreground whitespace-nowrap">{formatDate(project.startDate)}</TableCell>
+                          <TableCell className="py-3 text-muted-foreground whitespace-nowrap">{formatDate(project.endDate)}</TableCell>
+                          <TableCell className="py-3 whitespace-nowrap">
                             {daysRemainingDisplay}
                           </TableCell>
-                          <TableCell className="py-3 text-muted-foreground">{project.teamLead}</TableCell>
+                          <TableCell className="py-3 text-muted-foreground whitespace-nowrap">{project.teamLead}</TableCell>
+                          <TableCell className="py-3 text-muted-foreground">{project.portfolio}</TableCell>
                         </TableRow>
                       );
                     })}
@@ -496,29 +714,12 @@ ${reportHtml}
         </TabsContent>
 
         <TabsContent value="portfolio" className="mt-6">
-           <Card className="shadow-lg mb-6">
-             <CardHeader className="pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div>
-                <CardTitle className="text-2xl">Portfolio Summary Actions</CardTitle>
-                <CardDescription>Download or share this portfolio summary.</CardDescription>
-              </div>
-              <div className="flex gap-2">
-                 {/* CSV download might not be ideal for portfolio summary cards, so it's omitted here. */}
-                <Button onClick={handleDownloadPDF} size="sm" variant="outline">
-                  <FileType className="mr-2 h-4 w-4" /> PDF
-                </Button>
-                <Button onClick={handleShareViaEmail} size="sm" variant="outline">
-                  <Mail className="mr-2 h-4 w-4" /> Share
-                </Button>
-              </div>
-            </CardHeader>
-           </Card>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {portfolioSummaries.map(summary => (
               <Card key={summary.portfolioName} className="shadow-lg flex flex-col">
                 <CardHeader className="pb-3 pt-5">
                   <CardTitle className="text-xl text-primary">{summary.portfolioName}</CardTitle>
-                  <CardDescription>{summary.totalProjects} projects</CardDescription>
+                  <CardDescription>{summary.totalProjects} project{summary.totalProjects !== 1 ? 's' : ''}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3 flex-grow pt-2 text-sm">
                   <div>
@@ -552,6 +753,14 @@ ${reportHtml}
                     )}
                     </div>
                   </div>
+                   <Button 
+                    variant="link" 
+                    size="sm" 
+                    className="text-xs h-auto p-0 mt-2" 
+                    onClick={() => {setSelectedPortfolioForModal(summary); setIsPortfolioModalOpen(true);}}
+                  >
+                    View Projects in Portfolio
+                  </Button>
                 </CardContent>
               </Card>
             ))}
@@ -559,8 +768,7 @@ ${reportHtml}
                 <Card className="md:col-span-2 lg:col-span-3 shadow-lg">
                     <CardContent className="text-center py-16">
                         <Briefcase className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                        <p className="text-muted-foreground text-lg">No portfolio data available.</p>
-                        <p className="text-sm text-muted-foreground">Projects might not be assigned to portfolios yet.</p>
+                        <p className="text-muted-foreground text-lg">No portfolio data available for current filters.</p>
                     </CardContent>
                 </Card>
             )}
@@ -569,69 +777,64 @@ ${reportHtml}
 
         <TabsContent value="resources" className="mt-6">
           <Card className="shadow-lg">
-            <CardHeader className="pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div>
+            <CardHeader className="pb-4">
                 <CardTitle className="text-2xl">Team Overview & Workload</CardTitle>
-                <CardDescription>Breakdown of projects managed by each team lead.</CardDescription>
-              </div>
-              <div className="flex gap-2">
-                {/* CSV download for team workload might be relevant if detailed project lists are included in CSV, but for simplicity, keeping consistent action buttons. */}
-                <Button onClick={handleDownloadPDF} size="sm" variant="outline">
-                  <FileType className="mr-2 h-4 w-4" /> PDF
-                </Button>
-                <Button onClick={handleShareViaEmail} size="sm" variant="outline">
-                  <Mail className="mr-2 h-4 w-4" /> Share
-                </Button>
-              </div>
+                <CardDescription>Breakdown of projects managed by each team lead, based on current filters.</CardDescription>
             </CardHeader>
             <CardContent className="pt-2">
               <ScrollArea className="h-[600px] w-full">
                 <Table>
                   <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
                     <TableRow>
-                      <TableHead className="w-[200px] py-3">Team Lead</TableHead>
-                      <TableHead className="text-center w-[120px] py-3">Project Count</TableHead>
-                      <TableHead className="py-3">Active Projects (Status & Priority)</TableHead>
+                      <TableHead className="w-[180px] py-3 whitespace-nowrap">Team Lead</TableHead>
+                      <TableHead className="text-center py-3 whitespace-nowrap">Total Projects</TableHead>
+                      <TableHead className="text-center py-3 whitespace-nowrap">Active</TableHead>
+                      <TableHead className="text-center py-3 whitespace-nowrap">Completed</TableHead>
+                      <TableHead className="text-right py-3 whitespace-nowrap">Avg. Active Comp. %</TableHead>
+                      <TableHead className="text-right py-3 whitespace-nowrap">Total Budget ($)</TableHead>
+                      <TableHead className="py-3">Active Project Statuses</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
+                    {teamLeadWorkloads.length === 0 && (
+                        <TableRow><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No team lead data for current filters.</TableCell></TableRow>
+                    )}
                     {teamLeadWorkloads.map(lead => (
                       <TableRow key={lead.teamLead} className="hover:bg-muted/30">
-                        <TableCell className="font-medium py-3">{lead.teamLead}</TableCell>
+                        <TableCell className="font-medium py-3 whitespace-nowrap">{lead.teamLead}</TableCell>
                         <TableCell className="text-center py-3">{lead.projectCount}</TableCell>
+                        <TableCell className="text-center py-3">{lead.activeProjectsCount}</TableCell>
+                        <TableCell className="text-center py-3">{lead.completedProjectsCount}</TableCell>
+                        <TableCell className="text-right py-3">
+                            <div className="flex items-center justify-end">
+                                <span className="mr-2 text-sm">{lead.averageCompletionPercentage.toFixed(1)}%</span>
+                                <Progress value={lead.averageCompletionPercentage} className="h-2 w-16 sm:w-20" aria-label={`Average active completion ${lead.averageCompletionPercentage}%`} />
+                            </div>
+                        </TableCell>
+                        <TableCell className="text-right py-3">{formatCurrency(lead.totalBudgetManaged)}</TableCell>
                         <TableCell className="py-3">
-                          <div className="flex flex-wrap gap-2">
-                            {lead.projects.filter(p => p.status !== 'Completed').map(p => (
-                               <TooltipProvider key={p.id} delayDuration={100}>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Badge variant="secondary" className="cursor-default text-xs font-normal px-2 py-1 hover:bg-muted">
-                                      <span className="truncate max-w-[150px] mr-1.5">{p.name}</span>
-                                      <Badge className={cn('text-[0.65rem] leading-tight py-0 px-1', statusColors[p.status])}>
-                                        {p.status.substring(0,1)}
-                                      </Badge>
-                                      <Badge variant="outline" className={cn("ml-1 text-[0.65rem] leading-tight py-0 px-1", priorityColors[p.priority])}>
-                                        {p.priority.substring(0,1)}
-                                      </Badge>
-                                    </Badge>
-                                  </TooltipTrigger>
-                                  <TooltipContent className="text-xs p-2 bg-popover shadow-md rounded-md border">
-                                    <p className="font-semibold">{p.name}</p>
-                                    <p className="text-muted-foreground">Status: {p.status}</p>
-                                    <p className="text-muted-foreground">Priority: {p.priority}</p>
-                                    <p className="text-muted-foreground">Completion: {p.completionPercentage}%</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            ))}
-                             {lead.projects.filter(p => p.status === 'Completed').length > 0 && (
-                                <Badge variant="outline" className="text-xs font-normal px-2 py-1 border-dashed">
-                                    +{lead.projects.filter(p => p.status === 'Completed').length} completed
-                                </Badge>
-                             )}
-                             {lead.projects.filter(p => p.status !== 'Completed').length === 0 && (
-                                <span className="text-sm text-muted-foreground italic">No active projects.</span>
-                             )}
+                          <div className="flex flex-wrap gap-1.5">
+                            {Object.entries(lead.statusDistribution)
+                              .filter(([status, count]) => status !== 'Completed' && count > 0)
+                              .map(([status, count]) => {
+                                const StatusIconElement = statusIcons[status as ProjectStatus];
+                                return (
+                                  <TooltipProvider key={status} delayDuration={100}>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Badge className={cn('text-xs px-2 py-0.5', statusColors[status as ProjectStatus])}>
+                                          {StatusIconElement && <StatusIconElement className="h-3 w-3 mr-1" />}
+                                          {count}
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="text-xs p-1.5 bg-popover shadow-sm rounded-sm border">
+                                        {count} {status} project{count > 1 ? 's' : ''}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                );
+                            })}
+                            {lead.activeProjectsCount === 0 && <span className="text-xs text-muted-foreground italic">No active projects</span>}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -643,9 +846,49 @@ ${reportHtml}
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Portfolio Projects Modal */}
+       <Dialog open={isPortfolioModalOpen} onOpenChange={setIsPortfolioModalOpen}>
+        <DialogContent className="sm:max-w-2xl md:max-w-3xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Projects in: {selectedPortfolioForModal?.portfolioName}</DialogTitle>
+            <DialogDescription>
+              List of projects within the selected portfolio based on current filters.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh] mt-4 pr-2">
+            {selectedPortfolioForModal && selectedPortfolioForModal.projects.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Project Name</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Completion %</TableHead>
+                    <TableHead>Team Lead</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selectedPortfolioForModal.projects.map(project => (
+                    <TableRow key={project.id}>
+                      <TableCell className="font-medium text-primary">{project.name}</TableCell>
+                      <TableCell>
+                        <Badge className={cn('text-xs', statusColors[project.status])}>
+                          {project.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{project.completionPercentage}%</TableCell>
+                      <TableCell>{project.teamLead}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-center text-muted-foreground py-8">No projects to display for this portfolio with current filters.</p>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
-
-
-
