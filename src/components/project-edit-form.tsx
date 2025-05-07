@@ -13,19 +13,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { CalendarIcon, PlusCircle, Trash2, Save, XCircle, Loader2, AlertTriangle, Info } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Trash2, Save, XCircle, Loader2, AlertTriangle, Info, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { assessProjectRisk, type AssessProjectRiskInput, type AssessProjectRiskOutput } from '@/ai/flows/risk-assessment';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { mockProjects } from '@/lib/mock-data'; // For user list simulation
 
 const milestoneSchema = z.object({
   id: z.string(),
   name: z.string().min(3, 'Milestone name must be at least 3 characters.').max(100, 'Milestone name too long.'),
   date: z.string().refine((val) => !isNaN(Date.parse(val)), { message: 'Invalid date format for milestone.' }),
   status: z.enum(['Pending', 'In Progress', 'Completed', 'Blocked']),
+  assignedTo: z.string().optional(),
 });
 
 const projectFormSchema = z.object({
@@ -38,6 +40,7 @@ const projectFormSchema = z.object({
   spent: z.coerce.number().min(0, 'Spent amount must be a positive number.').max(1_000_000_000, "Spent amount too large."),
   completionPercentage: z.coerce.number().min(0).max(100, 'Completion must be between 0 and 100.'),
   teamLead: z.string().min(3, 'Team lead name must be at least 3 characters.').max(50, "Team lead name too long."),
+  assignedUsers: z.array(z.string()).optional(),
   priority: z.enum(['High', 'Medium', 'Low']),
   portfolio: z.string().min(3, 'Portfolio name must be at least 3 characters.').max(50, "Portfolio name too long."),
   status: z.enum(['On Track', 'At Risk', 'Delayed', 'Completed', 'Planning']),
@@ -59,9 +62,13 @@ type ProjectFormValues = z.infer<typeof projectFormSchema>;
 
 interface ProjectEditFormProps {
   project: Project;
-  onSubmit: (data: Project) => void; 
+  onSubmit: (data: Project) => void;
   onCancel: () => void;
 }
+
+// Simulate a list of available users for assignment
+const availableUsers = Array.from(new Set(mockProjects.flatMap(p => [p.teamLead, ...(p.assignedUsers || [])]).filter(Boolean))).sort();
+
 
 export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditFormProps) {
   const { toast } = useToast();
@@ -74,13 +81,15 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
       ...project,
       startDate: project.startDate ? format(parseISO(project.startDate), 'yyyy-MM-dd') : '',
       endDate: project.endDate ? format(parseISO(project.endDate), 'yyyy-MM-dd') : '',
+      assignedUsers: project.assignedUsers || [],
       keyMilestones: project.keyMilestones.map(m => ({
         ...m,
         date: m.date ? format(parseISO(m.date), 'yyyy-MM-dd') : '',
+        assignedTo: m.assignedTo || undefined,
       })),
       riskAssessment: project.riskAssessment || undefined,
     },
-     mode: 'onChange', // Validate on change for better UX
+     mode: 'onChange',
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -106,14 +115,22 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
       };
 
       const milestoneDetails = projectDataToUpdate.keyMilestones.length > 0
-        ? `Key milestones: ${projectDataToUpdate.keyMilestones.map(m => `${m.name} (Target: ${format(parseISO(m.date), 'MMM d, yyyy')}, Status: ${m.status})`).join('; ')}.`
+        ? `Key milestones: ${projectDataToUpdate.keyMilestones.map(m => `${m.name} (Target: ${format(parseISO(m.date), 'MMM d, yyyy')}, Status: ${m.status}, Assigned: ${m.assignedTo || 'N/A'})`).join('; ')}.`
         : 'No key milestones defined.';
-      
+
+      const teamCompositionDetails = [
+        `Lead by ${projectDataToUpdate.teamLead}.`,
+        projectDataToUpdate.assignedUsers && projectDataToUpdate.assignedUsers.length > 0 ? `Team: ${projectDataToUpdate.assignedUsers.join(', ')}.` : 'No specific team members assigned.',
+        `Portfolio: ${projectDataToUpdate.portfolio}.`,
+        `Priority: ${projectDataToUpdate.priority}.`,
+        `Current Status: ${projectDataToUpdate.status}.`
+      ].join(' ');
+
       const aiInput: AssessProjectRiskInput = {
         projectDescription: projectDataToUpdate.description,
         projectTimeline: `Project duration: ${format(parseISO(projectDataToUpdate.startDate), 'MMM d, yyyy')} to ${format(parseISO(projectDataToUpdate.endDate), 'MMM d, yyyy')}. ${milestoneDetails}`,
         projectBudget: `Budget: $${projectDataToUpdate.budget.toLocaleString()}, Current Spend: $${projectDataToUpdate.spent.toLocaleString()}`,
-        teamComposition: `Lead by ${projectDataToUpdate.teamLead}. Portfolio: ${projectDataToUpdate.portfolio}. Priority: ${projectDataToUpdate.priority}. Current Status: ${projectDataToUpdate.status}.`,
+        teamComposition: teamCompositionDetails,
       };
 
       toast({
@@ -124,9 +141,9 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
       const riskAssessmentOutput = await assessProjectRisk(aiInput);
 
       projectDataToUpdate.riskAssessment = riskAssessmentOutput;
-      
+
       onSubmit(projectDataToUpdate);
-      
+
       toast({
         title: "Project Updated & Risk Assessed",
         description: `${projectDataToUpdate.name} has been updated and risks re-assessed.`,
@@ -159,12 +176,12 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
             <AlertDescription>{formError}</AlertDescription>
           </Alert>
         )}
-        
+
         <Alert className="bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300">
           <Info className="h-5 w-5 !text-blue-600 dark:!text-blue-400" />
           <AlertTitle className="font-semibold">AI Risk Re-assessment</AlertTitle>
           <AlertDescription className="text-sm">
-            Modifying project details will trigger a new AI-powered risk assessment upon saving. 
+            Modifying project details will trigger a new AI-powered risk assessment upon saving.
             The results will be updated on the project details page.
           </AlertDescription>
         </Alert>
@@ -191,9 +208,18 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Team Lead</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter team lead's name" {...field} disabled={isSubmitting} />
-                  </FormControl>
+                   <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
+                      <FormControl>
+                          <SelectTrigger className="h-10">
+                              <SelectValue placeholder="Select team lead" />
+                          </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                          {availableUsers.map(user => (
+                              <SelectItem key={user} value={user}>{user}</SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -208,6 +234,58 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
                 <FormControl>
                   <Textarea placeholder="Enter project description" {...field} rows={4} disabled={isSubmitting} />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+           <FormField
+            control={form.control}
+            name="assignedUsers"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2"><Users className="h-4 w-4" /> Assigned Team Members (Optional)</FormLabel>
+                <Select
+                  onValueChange={(value) => {
+                    const currentSelection = field.value || [];
+                    const newSelection = currentSelection.includes(value)
+                      ? currentSelection.filter(v => v !== value)
+                      : [...currentSelection, value];
+                    field.onChange(newSelection);
+                  }}
+                  // `value` prop for multi-select with shadcn/ui needs custom handling or a multi-select component
+                  // This simple Select is for single user selection logic per click.
+                  // For actual multi-select UI, consider a component like https://shadcn-tag.vercel.app/
+                  disabled={isSubmitting}
+                >
+                  <FormControl>
+                     <SelectTrigger className="h-auto min-h-10 py-2">
+                        <SelectValue placeholder="Select team members to assign/unassign" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {availableUsers.map((user) => (
+                      <SelectItem key={user} value={user}>
+                        <div className="flex items-center">
+                          <span className="mr-2">
+                            {(field.value || []).includes(user) ? '✅' : '🔲'}
+                          </span>
+                          {user}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {field.value && field.value.length > 0 && (
+                    <div className="pt-2 flex flex-wrap gap-2">
+                        {field.value.map(user => (
+                            <Badge key={user} variant="secondary" className="py-1 px-2 text-xs">
+                                {user}
+                                <button type="button" onClick={() => field.onChange(field.value?.filter(v => v !== user))} className="ml-1.5 text-muted-foreground hover:text-foreground">&times;</button>
+                            </Badge>
+                        ))}
+                    </div>
+                )}
+                <FormDescription className="text-xs">Click to add/remove users. Selected users are listed below.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -319,7 +397,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
             />
           </div>
         </section>
-        
+
         <section className="space-y-6">
             <h3 className="text-xl font-semibold text-foreground border-b pb-2 mb-6">Categorization & Status</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-5">
@@ -395,7 +473,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
                 />
             </div>
         </section>
-        
+
         <section className="space-y-4">
           <div className="flex items-center justify-between border-b pb-2 mb-6">
             <h3 className="text-xl font-semibold text-foreground">Key Milestones</h3>
@@ -404,7 +482,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
                 variant="outline"
                 size="sm"
                 disabled={isSubmitting || fields.length >= 20}
-                onClick={() => append({ id: `m-new-${Date.now()}`, name: '', date: format(new Date(), 'yyyy-MM-dd'), status: 'Pending' })}
+                onClick={() => append({ id: `m-new-${Date.now()}`, name: '', date: format(new Date(), 'yyyy-MM-dd'), status: 'Pending', assignedTo: '' })}
               >
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Milestone
               </Button>
@@ -412,12 +490,12 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
           {fields.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No milestones added yet.</p>}
           {fields.map((item, index) => (
             <div key={item.id} className="space-y-4 p-5 border rounded-lg shadow-sm bg-secondary/30 relative">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-5 items-start">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-x-6 gap-y-5 items-start">
                 <FormField
                   control={form.control}
                   name={`keyMilestones.${index}.name`}
                   render={({ field }) => (
-                    <FormItem className="lg:col-span-1">
+                    <FormItem className="lg:col-span-2">
                       <FormLabel>Milestone {index + 1} Name</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="e.g., Design Complete" disabled={isSubmitting} />
@@ -430,7 +508,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
                   control={form.control}
                   name={`keyMilestones.${index}.date`}
                   render={({ field }) => (
-                    <FormItem className="flex flex-col lg:col-span-1">
+                    <FormItem className="flex flex-col lg:col-span-2">
                       <FormLabel>Target Date</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
@@ -481,6 +559,29 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name={`keyMilestones.${index}.assignedTo`}
+                  render={({ field }) => (
+                    <FormItem className="lg:col-span-2">
+                      <FormLabel>Assigned To</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
+                        <FormControl>
+                          <SelectTrigger className="h-10">
+                            <SelectValue placeholder="Assign user" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">Unassigned</SelectItem>
+                          {availableUsers.map(user => (
+                              <SelectItem key={user} value={user}>{user}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
               <Button
                 type="button"
@@ -495,13 +596,18 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
               </Button>
             </div>
           ))}
+           {form.formState.errors.keyMilestones && !form.formState.errors.keyMilestones.root && (
+                <FormMessage className="text-sm text-destructive mt-2">
+                    {(form.formState.errors.keyMilestones as any)?.message}
+                </FormMessage>
+            )}
         </section>
 
         <div className="flex justify-end space-x-3 pt-6 border-t">
           <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting} size="lg">
              <XCircle className="mr-2 h-5 w-5" /> Cancel
           </Button>
-          <Button type="submit" disabled={isSubmitting} size="lg">
+          <Button type="submit" disabled={isSubmitting || !form.formState.isValid && form.formState.isSubmitted} size="lg">
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Saving & Assessing...

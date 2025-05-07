@@ -1,5 +1,7 @@
 
 import type { Project } from '@/types/project';
+import type { DiscussionComment } from '@/types/discussion';
+import type { ProjectDocument } from '@/types/document';
 
 export const mockProjects: Project[] = [
   {
@@ -13,15 +15,16 @@ export const mockProjects: Project[] = [
     spent: 120000,
     completionPercentage: 25,
     teamLead: 'Alice Wonderland',
+    assignedUsers: ['Alice Wonderland', 'Charlie Brown', 'Diana Prince'],
     keyMilestones: [
-      { id: 'm1-1', name: 'Initial Design Phase Complete', date: '2024-03-01', status: 'Completed' },
-      { id: 'm1-2', name: 'Alpha Version Release', date: '2024-06-15', status: 'In Progress' },
-      { id: 'm1-3', name: 'Beta Testing', date: '2024-09-01', status: 'Pending' },
+      { id: 'm1-1', name: 'Initial Design Phase Complete', date: '2024-03-01', status: 'Completed', assignedTo: 'Alice Wonderland' },
+      { id: 'm1-2', name: 'Alpha Version Release', date: '2024-06-15', status: 'In Progress', assignedTo: 'Charlie Brown' },
+      { id: 'm1-3', name: 'Beta Testing', date: '2024-09-01', status: 'Pending', assignedTo: 'Diana Prince' },
     ],
     lastUpdated: '2024-07-20',
     priority: 'High',
     portfolio: 'Core Infrastructure',
-    riskAssessment: undefined, 
+    riskAssessment: undefined,
   },
   {
     id: 'proj-002',
@@ -34,15 +37,16 @@ export const mockProjects: Project[] = [
     spent: 180000,
     completionPercentage: 60,
     teamLead: 'Bob The Builder',
+    assignedUsers: ['Bob The Builder', 'Edward Nygma'],
     keyMilestones: [
-      { id: 'm2-1', name: 'Infrastructure Setup', date: '2024-04-01', status: 'Completed' },
-      { id: 'm2-2', name: 'Test Data Migration', date: '2024-06-01', status: 'Completed' },
-      { id: 'm2-3', name: 'Production Data Migration Window 1', date: '2024-08-15', status: 'Blocked' },
+      { id: 'm2-1', name: 'Infrastructure Setup', date: '2024-04-01', status: 'Completed', assignedTo: 'Bob The Builder' },
+      { id: 'm2-2', name: 'Test Data Migration', date: '2024-06-01', status: 'Completed', assignedTo: 'Edward Nygma' },
+      { id: 'm2-3', name: 'Production Data Migration Window 1', date: '2024-08-15', status: 'Blocked', assignedTo: 'Bob The Builder' },
     ],
     lastUpdated: '2024-07-18',
     priority: 'High',
     portfolio: 'Core Infrastructure',
-    riskAssessment: { 
+    riskAssessment: {
         identifiedRisks: ["Potential data loss during migration", "Unexpected downtime exceeding SLA"],
         riskMitigationRecommendations: ["Perform incremental backups before migration", "Have rollback plan ready"],
         overallRiskScore: 75,
@@ -59,10 +63,11 @@ export const mockProjects: Project[] = [
     spent: 140000,
     completionPercentage: 85,
     teamLead: 'Carol Danvers',
+    assignedUsers: ['Carol Danvers', 'Bruce Wayne'],
     keyMilestones: [
-      { id: 'm3-1', name: 'API Key Acquisition', date: '2024-02-15', status: 'Completed' },
-      { id: 'm3-2', name: 'Core Module Integration', date: '2024-05-01', status: 'Completed' },
-      { id: 'm3-3', name: 'User Acceptance Testing', date: '2024-07-15', status: 'In Progress' },
+      { id: 'm3-1', name: 'API Key Acquisition', date: '2024-02-15', status: 'Completed', assignedTo: 'Carol Danvers'},
+      { id: 'm3-2', name: 'Core Module Integration', date: '2024-05-01', status: 'Completed', assignedTo: 'Bruce Wayne' },
+      { id: 'm3-3', name: 'User Acceptance Testing', date: '2024-07-15', status: 'In Progress', assignedTo: 'Carol Danvers' },
     ],
     lastUpdated: '2024-07-15',
     priority: 'Medium',
@@ -80,10 +85,11 @@ export const mockProjects: Project[] = [
     spent: 285000,
     completionPercentage: 100,
     teamLead: 'David Copperfield',
+    assignedUsers: ['David Copperfield', 'Selina Kyle'],
     keyMilestones: [
-      { id: 'm4-1', name: 'System Audit', date: '2023-10-01', status: 'Completed' },
-      { id: 'm4-2', name: 'Protocol Implementation', date: '2024-01-15', status: 'Completed' },
-      { id: 'm4-3', name: 'Final Review & Sign-off', date: '2024-03-20', status: 'Completed' },
+      { id: 'm4-1', name: 'System Audit', date: '2023-10-01', status: 'Completed', assignedTo: 'David Copperfield' },
+      { id: 'm4-2', name: 'Protocol Implementation', date: '2024-01-15', status: 'Completed', assignedTo: 'Selina Kyle' },
+      { id: 'm4-3', name: 'Final Review & Sign-off', date: '2024-03-20', status: 'Completed', assignedTo: 'David Copperfield' },
     ],
     lastUpdated: '2024-04-01',
     priority: 'High',
@@ -105,9 +111,10 @@ export const mockProjects: Project[] = [
     spent: 10000,
     completionPercentage: 5,
     teamLead: 'Eva Green',
+    assignedUsers: ['Eva Green', 'Clark Kent'],
     keyMilestones: [
-      { id: 'm5-1', name: 'Market Research', date: '2024-08-30', status: 'In Progress' },
-      { id: 'm5-2', name: 'UX/UI Design Specs', date: '2024-10-15', status: 'Pending' },
+      { id: 'm5-1', name: 'Market Research', date: '2024-08-30', status: 'In Progress', assignedTo: 'Eva Green' },
+      { id: 'm5-2', name: 'UX/UI Design Specs', date: '2024-10-15', status: 'Pending', assignedTo: 'Clark Kent' },
     ],
     lastUpdated: '2024-07-19',
     priority: 'Medium',
@@ -125,17 +132,17 @@ export const mockProjects: Project[] = [
     spent: 30000,
     completionPercentage: 20,
     teamLead: 'Frank Moses',
+    assignedUsers: ['Frank Moses', 'Lois Lane'],
     keyMilestones: [
-      { id: 'm6-1', name: 'Campaign Strategy Finalized', date: '2024-07-15', status: 'Completed' },
-      { id: 'm6-2', name: 'Creative Assets Production', date: '2024-08-30', status: 'In Progress' },
-      { id: 'm6-3', name: 'Campaign Launch', date: '2024-10-01', status: 'Pending' },
+      { id: 'm6-1', name: 'Campaign Strategy Finalized', date: '2024-07-15', status: 'Completed', assignedTo: 'Frank Moses' },
+      { id: 'm6-2', name: 'Creative Assets Production', date: '2024-08-30', status: 'In Progress', assignedTo: 'Lois Lane' },
+      { id: 'm6-3', name: 'Campaign Launch', date: '2024-10-01', status: 'Pending', assignedTo: 'Frank Moses' },
     ],
     lastUpdated: '2024-07-22',
     priority: 'Medium',
     portfolio: 'Customer Experience',
     riskAssessment: undefined,
   },
-  // New Projects Start Here
   {
     id: 'proj-007',
     name: 'Quantum Leap Platform',
@@ -147,9 +154,10 @@ export const mockProjects: Project[] = [
     spent: 50000,
     completionPercentage: 2,
     teamLead: 'Grace Hopper',
+    assignedUsers: ['Grace Hopper', 'Ada Lovelace'],
     keyMilestones: [
-      { id: 'm7-1', name: 'Feasibility Study', date: '2024-11-30', status: 'Pending' },
-      { id: 'm7-2', name: 'Prototype Design', date: '2025-03-31', status: 'Pending' },
+      { id: 'm7-1', name: 'Feasibility Study', date: '2024-11-30', status: 'Pending', assignedTo: 'Grace Hopper' },
+      { id: 'm7-2', name: 'Prototype Design', date: '2025-03-31', status: 'Pending', assignedTo: 'Ada Lovelace' },
     ],
     lastUpdated: '2024-07-25',
     priority: 'High',
@@ -166,9 +174,10 @@ export const mockProjects: Project[] = [
     spent: 90000,
     completionPercentage: 30,
     teamLead: 'Harry Dresden',
+    assignedUsers: ['Harry Dresden', 'Kevin Mitnick'],
     keyMilestones: [
-      { id: 'm8-1', name: 'Threat Modeling', date: '2024-07-01', status: 'Completed' },
-      { id: 'm8-2', name: 'Firewall Upgrades', date: '2024-09-15', status: 'In Progress' },
+      { id: 'm8-1', name: 'Threat Modeling', date: '2024-07-01', status: 'Completed', assignedTo: 'Harry Dresden' },
+      { id: 'm8-2', name: 'Firewall Upgrades', date: '2024-09-15', status: 'In Progress', assignedTo: 'Kevin Mitnick' },
     ],
     lastUpdated: '2024-07-24',
     priority: 'High',
@@ -185,9 +194,10 @@ export const mockProjects: Project[] = [
     spent: 150000,
     completionPercentage: 55,
     teamLead: 'Ivy Valentine',
+    assignedUsers: ['Ivy Valentine', 'Greta Thunberg'],
     keyMilestones: [
-      { id: 'm9-1', name: 'Current State Analysis', date: '2024-05-15', status: 'Completed' },
-      { id: 'm9-2', name: 'Vendor Negotiations', date: '2024-08-01', status: 'Blocked' },
+      { id: 'm9-1', name: 'Current State Analysis', date: '2024-05-15', status: 'Completed', assignedTo: 'Ivy Valentine' },
+      { id: 'm9-2', name: 'Vendor Negotiations', date: '2024-08-01', status: 'Blocked', assignedTo: 'Ivy Valentine' },
     ],
     lastUpdated: '2024-07-23',
     priority: 'Medium',
@@ -204,10 +214,11 @@ export const mockProjects: Project[] = [
     spent: 170000,
     completionPercentage: 90,
     teamLead: 'Jack Sparrow',
+    assignedUsers: ['Jack Sparrow', 'Elizabeth Swann'],
     keyMilestones: [
-      { id: 'm10-1', name: 'Requirements Gathering', date: '2024-02-28', status: 'Completed' },
-      { id: 'm10-2', name: 'Backend Development', date: '2024-06-15', status: 'Completed' },
-      { id: 'm10-3', name: 'Frontend Polish', date: '2024-08-10', status: 'In Progress' },
+      { id: 'm10-1', name: 'Requirements Gathering', date: '2024-02-28', status: 'Completed', assignedTo: 'Jack Sparrow' },
+      { id: 'm10-2', name: 'Backend Development', date: '2024-06-15', status: 'Completed', assignedTo: 'Elizabeth Swann' },
+      { id: 'm10-3', name: 'Frontend Polish', date: '2024-08-10', status: 'In Progress', assignedTo: 'Jack Sparrow' },
     ],
     lastUpdated: '2024-07-25',
     priority: 'Low',
@@ -224,10 +235,11 @@ export const mockProjects: Project[] = [
     spent: 215000,
     completionPercentage: 100,
     teamLead: 'Kara Thrace',
+    assignedUsers: ['Kara Thrace', 'Lee Adama'],
     keyMilestones: [
-      { id: 'm11-1', name: 'Scenario Design', date: '2023-11-15', status: 'Completed' },
-      { id: 'm11-2', name: 'VR Development', date: '2024-03-01', status: 'Completed' },
-      { id: 'm11-3', name: 'Pilot Program', date: '2024-05-01', status: 'Completed' },
+      { id: 'm11-1', name: 'Scenario Design', date: '2023-11-15', status: 'Completed', assignedTo: 'Kara Thrace' },
+      { id: 'm11-2', name: 'VR Development', date: '2024-03-01', status: 'Completed', assignedTo: 'Lee Adama' },
+      { id: 'm11-3', name: 'Pilot Program', date: '2024-05-01', status: 'Completed', assignedTo: 'Kara Thrace' },
     ],
     lastUpdated: '2024-06-05',
     priority: 'Medium',
@@ -244,9 +256,10 @@ export const mockProjects: Project[] = [
     spent: 75000,
     completionPercentage: 15,
     teamLead: 'Luke Skywalker',
+    assignedUsers: ['Luke Skywalker', 'Leia Organa', 'Han Solo'],
     keyMilestones: [
-      { id: 'm12-1', name: 'Data Source Identification', date: '2024-07-31', status: 'In Progress' },
-      { id: 'm12-2', name: 'Schema Design', date: '2024-09-30', status: 'Pending' },
+      { id: 'm12-1', name: 'Data Source Identification', date: '2024-07-31', status: 'In Progress', assignedTo: 'Leia Organa' },
+      { id: 'm12-2', name: 'Schema Design', date: '2024-09-30', status: 'Pending', assignedTo: 'Han Solo' },
     ],
     lastUpdated: '2024-07-22',
     priority: 'High',
@@ -263,9 +276,10 @@ export const mockProjects: Project[] = [
     spent: 20000,
     completionPercentage: 3,
     teamLead: 'Maria Hill',
+    assignedUsers: ['Maria Hill', 'Tony Stark'],
     keyMilestones: [
-      { id: 'm13-1', name: 'Regulatory Approval', date: '2024-12-15', status: 'Pending' },
-      { id: 'm13-2', name: 'Grid Connection Study', date: '2025-02-28', status: 'Pending' },
+      { id: 'm13-1', name: 'Regulatory Approval', date: '2024-12-15', status: 'Pending', assignedTo: 'Maria Hill' },
+      { id: 'm13-2', name: 'Grid Connection Study', date: '2025-02-28', status: 'Pending', assignedTo: 'Tony Stark' },
     ],
     lastUpdated: '2024-07-19',
     priority: 'High',
@@ -282,9 +296,10 @@ export const mockProjects: Project[] = [
     spent: 100000,
     completionPercentage: 50,
     teamLead: 'Nick Fury',
+    assignedUsers: ['Nick Fury', 'Natasha Romanoff'],
     keyMilestones: [
-      { id: 'm14-1', name: 'Framework Definition', date: '2024-05-01', status: 'Completed' },
-      { id: 'm14-2', name: 'Rule Engine Development', date: '2024-08-15', status: 'In Progress' },
+      { id: 'm14-1', name: 'Framework Definition', date: '2024-05-01', status: 'Completed', assignedTo: 'Nick Fury' },
+      { id: 'm14-2', name: 'Rule Engine Development', date: '2024-08-15', status: 'In Progress', assignedTo: 'Natasha Romanoff' },
     ],
     lastUpdated: '2024-07-24',
     priority: 'Medium',
@@ -301,9 +316,10 @@ export const mockProjects: Project[] = [
     spent: 70000,
     completionPercentage: 40,
     teamLead: 'Olivia Dunham',
+    assignedUsers: ['Olivia Dunham', 'Philip Broyles'],
     keyMilestones: [
-      { id: 'm15-1', name: 'Workshop Facilitation', date: '2024-06-30', status: 'Completed' },
-      { id: 'm15-2', name: 'Data Collection from Systems', date: '2024-09-01', status: 'Blocked' },
+      { id: 'm15-1', name: 'Workshop Facilitation', date: '2024-06-30', status: 'Completed', assignedTo: 'Olivia Dunham' },
+      { id: 'm15-2', name: 'Data Collection from Systems', date: '2024-09-01', status: 'Blocked', assignedTo: 'Philip Broyles' },
     ],
     lastUpdated: '2024-07-25',
     priority: 'Medium',
@@ -320,9 +336,10 @@ export const mockProjects: Project[] = [
     spent: 150000,
     completionPercentage: 65,
     teamLead: 'Peter Bishop',
+    assignedUsers: ['Peter Bishop', 'Astrid Farnsworth'],
     keyMilestones: [
-      { id: 'm16-1', name: 'Process Identification', date: '2024-03-15', status: 'Completed' },
-      { id: 'm16-2', name: 'Robotics Integration', date: '2024-07-31', status: 'In Progress' },
+      { id: 'm16-1', name: 'Process Identification', date: '2024-03-15', status: 'Completed', assignedTo: 'Peter Bishop' },
+      { id: 'm16-2', name: 'Robotics Integration', date: '2024-07-31', status: 'In Progress', assignedTo: 'Astrid Farnsworth' },
     ],
     lastUpdated: '2024-07-20',
     priority: 'Medium',
@@ -339,10 +356,11 @@ export const mockProjects: Project[] = [
     spent: 310000,
     completionPercentage: 100,
     teamLead: 'Quinn Fabray',
+    assignedUsers: ['Quinn Fabray', 'Santana Lopez'],
     keyMilestones: [
-      { id: 'm17-1', name: 'Partner Feedback Collection', date: '2023-12-15', status: 'Completed' },
-      { id: 'm17-2', name: 'Platform Build', date: '2024-04-30', status: 'Completed' },
-      { id: 'm17-3', name: 'Go-Live', date: '2024-06-15', status: 'Completed' },
+      { id: 'm17-1', name: 'Partner Feedback Collection', date: '2023-12-15', status: 'Completed', assignedTo: 'Quinn Fabray' },
+      { id: 'm17-2', name: 'Platform Build', date: '2024-04-30', status: 'Completed', assignedTo: 'Santana Lopez' },
+      { id: 'm17-3', name: 'Go-Live', date: '2024-06-15', status: 'Completed', assignedTo: 'Quinn Fabray' },
     ],
     lastUpdated: '2024-07-01',
     priority: 'High',
@@ -359,9 +377,10 @@ export const mockProjects: Project[] = [
     spent: 5000,
     completionPercentage: 3,
     teamLead: 'Rachel Berry',
+    assignedUsers: ['Rachel Berry', 'Finn Hudson'],
     keyMilestones: [
-      { id: 'm18-1', name: 'Curriculum Design', date: '2024-11-30', status: 'Pending' },
-      { id: 'm18-2', name: 'Pilot Training Sessions', date: '2025-01-31', status: 'Pending' },
+      { id: 'm18-1', name: 'Curriculum Design', date: '2024-11-30', status: 'Pending', assignedTo: 'Rachel Berry' },
+      { id: 'm18-2', name: 'Pilot Training Sessions', date: '2025-01-31', status: 'Pending', assignedTo: 'Finn Hudson' },
     ],
     lastUpdated: '2024-07-23',
     priority: 'Medium',
@@ -378,9 +397,10 @@ export const mockProjects: Project[] = [
     spent: 25000,
     completionPercentage: 33,
     teamLead: 'Sam Winchester',
+    assignedUsers: ['Sam Winchester', 'Bobby Singer'],
     keyMilestones: [
-      { id: 'm19-1', name: 'Spending Analysis', date: '2024-05-31', status: 'Completed' },
-      { id: 'm19-2', name: 'Optimization Plan Implementation', date: '2024-08-31', status: 'In Progress' },
+      { id: 'm19-1', name: 'Spending Analysis', date: '2024-05-31', status: 'Completed', assignedTo: 'Sam Winchester' },
+      { id: 'm19-2', name: 'Optimization Plan Implementation', date: '2024-08-31', status: 'In Progress', assignedTo: 'Bobby Singer' },
     ],
     lastUpdated: '2024-07-25',
     priority: 'Low',
@@ -397,10 +417,11 @@ export const mockProjects: Project[] = [
     spent: 300000,
     completionPercentage: 50,
     teamLead: 'Dean Winchester',
+    assignedUsers: ['Dean Winchester', 'Castiel'],
     keyMilestones: [
-      { id: 'm20-1', name: 'Vendor Selection', date: '2024-04-15', status: 'Completed' },
-      { id: 'm20-2', name: 'Indexing Pilot Systems', date: '2024-07-31', status: 'In Progress' },
-      { id: 'm20-3', name: 'Scalability Testing', date: '2024-09-30', status: 'Blocked' },
+      { id: 'm20-1', name: 'Vendor Selection', date: '2024-04-15', status: 'Completed', assignedTo: 'Dean Winchester' },
+      { id: 'm20-2', name: 'Indexing Pilot Systems', date: '2024-07-31', status: 'In Progress', assignedTo: 'Castiel' },
+      { id: 'm20-3', name: 'Scalability Testing', date: '2024-09-30', status: 'Blocked', assignedTo: 'Dean Winchester' },
     ],
     lastUpdated: '2024-07-22',
     priority: 'High',
@@ -417,10 +438,11 @@ export const mockProjects: Project[] = [
     spent: 90000,
     completionPercentage: 92,
     teamLead: 'Walter Bishop',
+    assignedUsers: ['Walter Bishop', 'Nina Sharp'],
     keyMilestones: [
-      { id: 'm21-1', name: 'Integration API Development', date: '2024-04-30', status: 'Completed' },
-      { id: 'm21-2', name: 'Final UI Review', date: '2024-07-10', status: 'Completed' },
-      { id: 'm21-3', name: 'Deployment to Production', date: '2024-07-25', status: 'In Progress' }, // Current step causing delay
+      { id: 'm21-1', name: 'Integration API Development', date: '2024-04-30', status: 'Completed', assignedTo: 'Walter Bishop' },
+      { id: 'm21-2', name: 'Final UI Review', date: '2024-07-10', status: 'Completed', assignedTo: 'Nina Sharp' },
+      { id: 'm21-3', name: 'Deployment to Production', date: '2024-07-25', status: 'In Progress', assignedTo: 'Walter Bishop' },
     ],
     lastUpdated: '2024-07-24',
     priority: 'Low',
@@ -437,10 +459,11 @@ export const mockProjects: Project[] = [
     spent: 175000,
     completionPercentage: 100,
     teamLead: 'Fox Mulder',
+    assignedUsers: ['Fox Mulder', 'The Lone Gunmen'],
     keyMilestones: [
-      { id: 'm22-1', name: 'Data Preparation', date: '2024-02-01', status: 'Completed' },
-      { id: 'm22-2', name: 'Model Training', date: '2024-04-15', status: 'Completed' },
-      { id: 'm22-3', name: 'Validation and Deployment', date: '2024-06-01', status: 'Completed' },
+      { id: 'm22-1', name: 'Data Preparation', date: '2024-02-01', status: 'Completed', assignedTo: 'The Lone Gunmen' },
+      { id: 'm22-2', name: 'Model Training', date: '2024-04-15', status: 'Completed', assignedTo: 'Fox Mulder' },
+      { id: 'm22-3', name: 'Validation and Deployment', date: '2024-06-01', status: 'Completed', assignedTo: 'Fox Mulder' },
     ],
     lastUpdated: '2024-06-20',
     priority: 'Medium',
@@ -457,9 +480,10 @@ export const mockProjects: Project[] = [
     spent: 40000,
     completionPercentage: 18,
     teamLead: 'Dana Scully',
+    assignedUsers: ['Dana Scully', 'Walter Skinner'],
     keyMilestones: [
-      { id: 'm23-1', name: 'Sensor Deployment - Phase 1', date: '2024-08-31', status: 'In Progress' },
-      { id: 'm23-2', name: 'Dashboard Configuration', date: '2024-10-31', status: 'Pending' },
+      { id: 'm23-1', name: 'Sensor Deployment - Phase 1', date: '2024-08-31', status: 'In Progress', assignedTo: 'Walter Skinner' },
+      { id: 'm23-2', name: 'Dashboard Configuration', date: '2024-10-31', status: 'Pending', assignedTo: 'Dana Scully' },
     ],
     lastUpdated: '2024-07-23',
     priority: 'High',
@@ -476,9 +500,10 @@ export const mockProjects: Project[] = [
     spent: 2000,
     completionPercentage: 1,
     teamLead: 'John Locke',
+    assignedUsers: ['John Locke', 'Benjamin Linus'],
     keyMilestones: [
-      { id: 'm24-1', name: 'Vendor Research & Selection', date: '2024-12-31', status: 'Pending' },
-      { id: 'm24-2', name: 'Program Design & Communication Plan', date: '2025-02-15', status: 'Pending' },
+      { id: 'm24-1', name: 'Vendor Research & Selection', date: '2024-12-31', status: 'Pending', assignedTo: 'John Locke' },
+      { id: 'm24-2', name: 'Program Design & Communication Plan', date: '2025-02-15', status: 'Pending', assignedTo: 'Benjamin Linus' },
     ],
     lastUpdated: '2024-07-25',
     priority: 'Medium',
@@ -495,9 +520,10 @@ export const mockProjects: Project[] = [
     spent: 180000,
     completionPercentage: 35,
     teamLead: 'Kate Austen',
+    assignedUsers: ['Kate Austen', 'Hugo Reyes'],
     keyMilestones: [
-      { id: 'm25-1', name: 'Material Sourcing & Testing', date: '2024-06-30', status: 'Completed' },
-      { id: 'm25-2', name: 'Pilot Production Line Rollout', date: '2024-10-31', status: 'In Progress' },
+      { id: 'm25-1', name: 'Material Sourcing & Testing', date: '2024-06-30', status: 'Completed', assignedTo: 'Kate Austen' },
+      { id: 'm25-2', name: 'Pilot Production Line Rollout', date: '2024-10-31', status: 'In Progress', assignedTo: 'Hugo Reyes' },
     ],
     lastUpdated: '2024-07-21',
     priority: 'High',
@@ -514,14 +540,86 @@ export const mockProjects: Project[] = [
     spent: 550000,
     completionPercentage: 80,
     teamLead: 'James Sawyer',
+    assignedUsers: ['James Sawyer', 'Juliet Burke'],
     keyMilestones: [
-      { id: 'm26-1', name: 'Application Compatibility Assessment', date: '2024-03-01', status: 'Completed' },
-      { id: 'm26-2', name: 'Wave 1 Migration (Non-critical)', date: '2024-06-15', status: 'Completed' },
-      { id: 'm26-3', name: 'Wave 2 Migration (Critical Systems)', date: '2024-08-15', status: 'In Progress' }, // Currently Delayed
+      { id: 'm26-1', name: 'Application Compatibility Assessment', date: '2024-03-01', status: 'Completed', assignedTo: 'James Sawyer' },
+      { id: 'm26-2', name: 'Wave 1 Migration (Non-critical)', date: '2024-06-15', status: 'Completed', assignedTo: 'Juliet Burke' },
+      { id: 'm26-3', name: 'Wave 2 Migration (Critical Systems)', date: '2024-08-15', status: 'In Progress', assignedTo: 'James Sawyer' },
     ],
     lastUpdated: '2024-07-25',
     priority: 'High',
     portfolio: 'Core Infrastructure',
+  }
+];
+
+
+export const mockDiscussions: DiscussionComment[] = [
+  {
+    id: 'disc1-proj001',
+    projectId: 'proj-001',
+    author: 'Alice Wonderland',
+    authorAvatar: 'https://picsum.photos/seed/alice/40',
+    timestamp: '2024-07-20T10:00:00Z',
+    content: 'Alpha release is looking good. Let\'s focus on performance improvements for the next sprint.',
+  },
+  {
+    id: 'disc2-proj001',
+    projectId: 'proj-001',
+    author: 'Charlie Brown',
+    authorAvatar: 'https://picsum.photos/seed/charlie/40',
+    timestamp: '2024-07-20T10:30:00Z',
+    content: 'Agreed. I\'ve identified a few bottlenecks in the data processing module. Will create tasks for these.',
+  },
+  {
+    id: 'disc1-proj002',
+    projectId: 'proj-002',
+    author: 'Bob The Builder',
+    authorAvatar: 'https://picsum.photos/seed/bob/40',
+    timestamp: '2024-07-18T14:00:00Z',
+    content: 'Production migration window 1 is blocked due to unexpected dependencies. We need to escalate this.',
+  },
+];
+
+export const mockDocuments: ProjectDocument[] = [
+  {
+    id: 'doc1-proj001',
+    projectId: 'proj-001',
+    name: 'Project Phoenix - Initial PRD.pdf',
+    type: 'PDF',
+    size: '2.5MB',
+    uploadedAt: '2024-01-20T09:00:00Z',
+    uploadedBy: 'Alice Wonderland',
+    url: '#',
+  },
+  {
+    id: 'doc2-proj001',
+    projectId: 'proj-001',
+    name: 'Alpha Release Test Plan.docx',
+    type: 'Word',
+    size: '850KB',
+    uploadedAt: '2024-06-01T11:30:00Z',
+    uploadedBy: 'Charlie Brown',
+    url: '#',
+  },
+  {
+    id: 'doc1-proj002',
+    projectId: 'proj-002',
+    name: 'Data Migration Strategy.pptx',
+    type: 'PowerPoint',
+    size: '5.1MB',
+    uploadedAt: '2024-03-05T16:15:00Z',
+    uploadedBy: 'Bob The Builder',
+    url: '#',
+  },
+  {
+    id: 'doc2-proj002',
+    projectId: 'proj-002',
+    name: 'Rollback_Procedure_v3.pdf',
+    type: 'PDF',
+    size: '1.2MB',
+    uploadedAt: '2024-07-10T09:00:00Z',
+    uploadedBy: 'Edward Nygma',
+    url: '#',
   }
 ];
 
@@ -531,20 +629,45 @@ export function updateMockProject(updatedProject: Project): void {
   if (projectIndex !== -1) {
     mockProjects[projectIndex] = { ...updatedProject };
   } else {
-    // Optionally handle case where project to update is not found
     console.warn(`Project with id ${updatedProject.id} not found for update.`);
-    // mockProjects.push(updatedProject); // Or add if not found, depending on desired behavior
   }
+}
+
+export function addMockDiscussionComment(projectId: string, comment: Omit<DiscussionComment, 'id' | 'projectId' | 'timestamp' | 'authorAvatar'>, authorUsername: string): DiscussionComment {
+  const newComment: DiscussionComment = {
+    ...comment,
+    id: `disc${Date.now()}-${projectId}`,
+    projectId,
+    timestamp: new Date().toISOString(),
+    author: authorUsername,
+    authorAvatar: `https://picsum.photos/seed/${authorUsername.replace(/\s+/g, '')}/40`,
+  };
+  mockDiscussions.push(newComment);
+  return newComment;
+}
+
+export function addMockDocument(projectId: string, document: Omit<ProjectDocument, 'id' | 'projectId' | 'uploadedAt' | 'url' | 'type'>, uploadedByUsername: string, type: ProjectDocument['type'] = 'Other' ): ProjectDocument {
+  const newDocument: ProjectDocument = {
+    ...document,
+    id: `doc${Date.now()}-${projectId}`,
+    projectId,
+    type,
+    uploadedAt: new Date().toISOString(),
+    uploadedBy: uploadedByUsername,
+    url: '#', // Placeholder URL
+  };
+  mockDocuments.push(newDocument);
+  return newDocument;
 }
 
 // Available portfolios:
 // Core Infrastructure
 // Customer Experience
 // Innovation Lab
-// Research & Development (New)
-// Security Operations (New)
-// Sustainability Goals (New)
-// Internal Tools (New)
-// Data & Analytics (New)
+// Research & Development
+// Security Operations
+// Sustainability Goals
+// Internal Tools
+// Data & Analytics
 // Business Development
 // Human Capital

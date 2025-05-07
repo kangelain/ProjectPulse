@@ -7,6 +7,7 @@ export interface KeyMilestone {
   name: string;
   date: string;
   status: 'Pending' | 'In Progress' | 'Completed' | 'Blocked';
+  assignedTo?: string; // User assigned to this milestone
 }
 
 export interface Project {
@@ -20,9 +21,10 @@ export interface Project {
   spent: number;
   completionPercentage: number;
   teamLead: string;
+  assignedUsers?: string[]; // Users assigned to the project
   keyMilestones: KeyMilestone[];
   lastUpdated: string;
   priority: 'High' | 'Medium' | 'Low';
-  portfolio: string; // Added portfolio field
-  riskAssessment?: AssessProjectRiskOutput; // Added field for AI risk assessment results
+  portfolio: string;
+  riskAssessment?: AssessProjectRiskOutput;
 }
