@@ -2,6 +2,49 @@
 import type { Project } from '@/types/project';
 import type { DiscussionComment } from '@/types/discussion';
 import type { ProjectDocument } from '@/types/document';
+import type { Resource, ResourceAllocation } from '@/types/resource';
+
+export const mockResources: Resource[] = [
+  { id: 'res-001', name: 'Alice Wonderland', type: 'Personnel', status: 'Partially Allocated', skills: ['Project Management', 'UX Design', 'Agile'], lastUpdated: '2024-07-28' },
+  { id: 'res-002', name: 'Bob The Builder', type: 'Personnel', status: 'Fully Allocated', skills: ['Data Migration', 'Cloud Infrastructure', 'DevOps'], lastUpdated: '2024-07-28' },
+  { id: 'res-003', name: 'Carol Danvers', type: 'Personnel', status: 'Partially Allocated', skills: ['AI Integration', 'CRM Systems', 'API Development'], lastUpdated: '2024-07-28' },
+  { id: 'res-004', name: 'David Copperfield', type: 'Personnel', status: 'Available', skills: ['Security Audits', 'Protocol Implementation', 'Penetration Testing'], lastUpdated: '2024-07-28' },
+  { id: 'res-005', name: 'Eva Green', type: 'Personnel', status: 'Partially Allocated', skills: ['Mobile Development', 'Market Research', 'Product Strategy'], lastUpdated: '2024-07-28' },
+  { id: 'res-006', name: 'Frank Moses', type: 'Personnel', status: 'Available', skills: ['Marketing Strategy', 'Campaign Management', 'Creative Direction'], lastUpdated: '2024-07-28' },
+  { id: 'res-007', name: 'Grace Hopper', type: 'Personnel', status: 'Available', skills: ['Quantum Computing', 'R&D', 'Algorithm Design'], lastUpdated: '2024-07-28' },
+  { id: 'res-008', name: 'Harry Dresden', type: 'Personnel', status: 'Available', skills: ['Cybersecurity', 'Threat Modeling', 'Network Security'], lastUpdated: '2024-07-28' },
+  { id: 'res-009', name: 'Ivy Valentine', type: 'Personnel', status: 'Available', skills: ['Supply Chain Optimization', 'Logistics', 'Vendor Management'], lastUpdated: '2024-07-28' },
+  { id: 'res-010', name: 'Jack Sparrow', type: 'Personnel', status: 'Available', skills: ['HR Systems', 'Portal Development', 'User Experience'], lastUpdated: '2024-07-28' },
+  { id: 'res-011', name: 'High-Performance Server Cluster', type: 'Equipment', status: 'Available', location: 'Data Center A', capacity: 10, notes: 'For compute-intensive tasks', lastUpdated: '2024-07-25' },
+  { id: 'res-012', name: '3D Printer ProXL', type: 'Equipment', status: 'Maintenance', location: 'R&D Lab', notes: 'Scheduled maintenance until Aug 5th', lastUpdated: '2024-07-20' },
+  { id: 'res-013', name: 'VR Development Kits (Set of 5)', type: 'Equipment', status: 'Partially Allocated', location: 'Innovation Hub', capacity: 5, lastUpdated: '2024-07-22' },
+  { id: 'res-014', name: 'Conference Room Alpha', type: 'Facility', status: 'Available', location: 'Building 1, Floor 3', capacity: 20, lastUpdated: '2024-07-28' },
+  { id: 'res-015', name: 'Mobile Testing Device Lab', type: 'Facility', status: 'Fully Allocated', location: 'Building 2, Floor 1', capacity: 8, notes: 'Includes various iOS and Android devices', lastUpdated: '2024-07-26' },
+  { id: 'res-016', name: 'Charlie Brown', type: 'Personnel', status: 'Partially Allocated', skills: ['Frontend Development', 'JavaScript', 'React'], lastUpdated: '2024-07-28' },
+  { id: 'res-017', name: 'Diana Prince', type: 'Personnel', status: 'Partially Allocated', skills: ['Backend Development', 'Java', 'Spring Boot'], lastUpdated: '2024-07-28' },
+  { id: 'res-018', name: 'Edward Nygma', type: 'Personnel', status: 'Fully Allocated', skills: ['Database Administration', 'SQL', 'ETL Processes'], lastUpdated: '2024-07-28' },
+  { id: 'res-019', name: 'Bruce Wayne', type: 'Personnel', status: 'Partially Allocated', skills: ['AI/ML Engineering', 'Python', 'TensorFlow'], lastUpdated: '2024-07-28' },
+  { id: 'res-020', name: 'Selina Kyle', type: 'Personnel', status: 'Available', skills: ['Network Engineering', 'Cisco Certified', 'Firewall Management'], lastUpdated: '2024-07-28' },
+  { id: 'res-021', name: 'Clark Kent', type: 'Personnel', status: 'Partially Allocated', skills: ['UI Design', 'Figma', 'Adobe XD'], lastUpdated: '2024-07-28' },
+  { id: 'res-022', name: 'Lois Lane', type: 'Personnel', status: 'Available', skills: ['Content Creation', 'Copywriting', 'SEO'], lastUpdated: '2024-07-28' },
+];
+
+export const mockResourceAllocations: ResourceAllocation[] = [
+  { id: 'alloc-001', projectId: 'proj-001', resourceId: 'res-001', startDate: '2024-01-15', endDate: '2024-12-20', effortPercentage: 70, role: 'Project Lead / UX' },
+  { id: 'alloc-002', projectId: 'proj-001', resourceId: 'res-016', startDate: '2024-01-15', endDate: '2024-12-20', effortPercentage: 100, role: 'Lead Frontend Developer' },
+  { id: 'alloc-003', projectId: 'proj-001', resourceId: 'res-017', startDate: '2024-01-15', endDate: '2024-12-20', effortPercentage: 80, role: 'Lead Backend Developer' },
+  { id: 'alloc-004', projectId: 'proj-002', resourceId: 'res-002', startDate: '2024-03-01', endDate: '2024-09-30', effortPercentage: 100, role: 'Migration Lead' },
+  { id: 'alloc-005', projectId: 'proj-002', resourceId: 'res-018', startDate: '2024-03-01', endDate: '2024-09-30', effortPercentage: 100, role: 'DBA & ETL Specialist' },
+  { id: 'alloc-006', projectId: 'proj-003', resourceId: 'res-003', startDate: '2024-02-01', endDate: '2024-07-31', effortPercentage: 90, role: 'AI Integration Specialist' },
+  { id: 'alloc-007', projectId: 'proj-003', resourceId: 'res-019', startDate: '2024-02-01', endDate: '2024-07-31', effortPercentage: 50, role: 'AI/ML Engineer' },
+  { id: 'alloc-008', projectId: 'proj-005', resourceId: 'res-005', startDate: '2024-08-01', endDate: '2025-02-28', effortPercentage: 100, role: 'Mobile Project Lead' },
+  { id: 'alloc-009', projectId: 'proj-005', resourceId: 'res-021', startDate: '2024-08-01', endDate: '2025-02-28', effortPercentage: 75, role: 'UI Designer' },
+  { id: 'alloc-010', projectId: 'proj-011', resourceId: 'res-013', startDate: '2023-11-01', endDate: '2024-05-31', notes: '3 out of 5 kits used' }, // Equipment
+  { id: 'alloc-011', projectId: 'proj-005', resourceId: 'res-015', startDate: '2024-09-01', endDate: '2025-02-28', notes: 'Full capacity booking for testing phase' }, // Facility
+  { id: 'alloc-012', projectId: 'proj-006', resourceId: 'res-006', startDate: '2024-07-01', endDate: '2024-10-31', effortPercentage: 60, role: 'Campaign Manager' },
+  { id: 'alloc-013', projectId: 'proj-006', resourceId: 'res-022', startDate: '2024-07-01', endDate: '2024-10-31', effortPercentage: 80, role: 'Content Lead' },
+];
+
 
 export const mockProjects: Project[] = [
   {
@@ -14,7 +57,7 @@ export const mockProjects: Project[] = [
     budget: 500000,
     spent: 120000,
     completionPercentage: 25,
-    teamLead: 'Alice Wonderland',
+    teamLead: 'Alice Wonderland', // res-001
     assignedUsers: ['Alice Wonderland', 'Charlie Brown', 'Diana Prince'],
     keyMilestones: [
       { id: 'm1-1', name: 'Initial Design Phase Complete', date: '2024-03-01', status: 'Completed', assignedTo: 'Alice Wonderland' },
@@ -36,7 +79,7 @@ export const mockProjects: Project[] = [
     budget: 250000,
     spent: 180000,
     completionPercentage: 60,
-    teamLead: 'Bob The Builder',
+    teamLead: 'Bob The Builder', // res-002
     assignedUsers: ['Bob The Builder', 'Edward Nygma'],
     keyMilestones: [
       { id: 'm2-1', name: 'Infrastructure Setup', date: '2024-04-01', status: 'Completed', assignedTo: 'Bob The Builder' },
@@ -62,7 +105,7 @@ export const mockProjects: Project[] = [
     budget: 150000,
     spent: 140000,
     completionPercentage: 85,
-    teamLead: 'Carol Danvers',
+    teamLead: 'Carol Danvers', // res-003
     assignedUsers: ['Carol Danvers', 'Bruce Wayne'],
     keyMilestones: [
       { id: 'm3-1', name: 'API Key Acquisition', date: '2024-02-15', status: 'Completed', assignedTo: 'Carol Danvers'},
@@ -84,7 +127,7 @@ export const mockProjects: Project[] = [
     budget: 300000,
     spent: 285000,
     completionPercentage: 100,
-    teamLead: 'David Copperfield',
+    teamLead: 'David Copperfield', // res-004
     assignedUsers: ['David Copperfield', 'Selina Kyle'],
     keyMilestones: [
       { id: 'm4-1', name: 'System Audit', date: '2023-10-01', status: 'Completed', assignedTo: 'David Copperfield' },
@@ -110,7 +153,7 @@ export const mockProjects: Project[] = [
     budget: 400000,
     spent: 10000,
     completionPercentage: 5,
-    teamLead: 'Eva Green',
+    teamLead: 'Eva Green', // res-005
     assignedUsers: ['Eva Green', 'Clark Kent'],
     keyMilestones: [
       { id: 'm5-1', name: 'Market Research', date: '2024-08-30', status: 'In Progress', assignedTo: 'Eva Green' },
@@ -131,7 +174,7 @@ export const mockProjects: Project[] = [
     budget: 120000,
     spent: 30000,
     completionPercentage: 20,
-    teamLead: 'Frank Moses',
+    teamLead: 'Frank Moses', // res-006
     assignedUsers: ['Frank Moses', 'Lois Lane'],
     keyMilestones: [
       { id: 'm6-1', name: 'Campaign Strategy Finalized', date: '2024-07-15', status: 'Completed', assignedTo: 'Frank Moses' },
@@ -153,7 +196,7 @@ export const mockProjects: Project[] = [
     budget: 1200000,
     spent: 50000,
     completionPercentage: 2,
-    teamLead: 'Grace Hopper',
+    teamLead: 'Grace Hopper', // res-007
     assignedUsers: ['Grace Hopper', 'Ada Lovelace'],
     keyMilestones: [
       { id: 'm7-1', name: 'Feasibility Study', date: '2024-11-30', status: 'Pending', assignedTo: 'Grace Hopper' },
@@ -173,7 +216,7 @@ export const mockProjects: Project[] = [
     budget: 350000,
     spent: 90000,
     completionPercentage: 30,
-    teamLead: 'Harry Dresden',
+    teamLead: 'Harry Dresden', // res-008
     assignedUsers: ['Harry Dresden', 'Kevin Mitnick'],
     keyMilestones: [
       { id: 'm8-1', name: 'Threat Modeling', date: '2024-07-01', status: 'Completed', assignedTo: 'Harry Dresden' },
@@ -193,7 +236,7 @@ export const mockProjects: Project[] = [
     budget: 200000,
     spent: 150000,
     completionPercentage: 55,
-    teamLead: 'Ivy Valentine',
+    teamLead: 'Ivy Valentine', // res-009
     assignedUsers: ['Ivy Valentine', 'Greta Thunberg'],
     keyMilestones: [
       { id: 'm9-1', name: 'Current State Analysis', date: '2024-05-15', status: 'Completed', assignedTo: 'Ivy Valentine' },
@@ -213,7 +256,7 @@ export const mockProjects: Project[] = [
     budget: 180000,
     spent: 170000,
     completionPercentage: 90,
-    teamLead: 'Jack Sparrow',
+    teamLead: 'Jack Sparrow', // res-010
     assignedUsers: ['Jack Sparrow', 'Elizabeth Swann'],
     keyMilestones: [
       { id: 'm10-1', name: 'Requirements Gathering', date: '2024-02-28', status: 'Completed', assignedTo: 'Jack Sparrow' },
@@ -671,3 +714,8 @@ export function addMockDocument(projectId: string, document: Omit<ProjectDocumen
 // Data & Analytics
 // Business Development
 // Human Capital
+// Finance Modernization
+// Global Expansion
+// Product Lifecycle Management
+// Digital Transformation
+// Operational Excellence
