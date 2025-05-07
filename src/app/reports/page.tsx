@@ -411,7 +411,7 @@ ${reportHtml}
                 <Button onClick={handleDownloadPerformanceCSV} size="sm" variant="outline">
                   <Download className="mr-2 h-4 w-4" /> CSV
                 </Button>
-                <Button onClick={handleDownloadPDF} size="sm" variant="outline" disabled>
+                <Button onClick={handleDownloadPDF} size="sm" variant="outline">
                   <FileType className="mr-2 h-4 w-4" /> PDF
                 </Button>
                 <Button onClick={handleShareViaEmail} size="sm" variant="outline">
@@ -504,7 +504,7 @@ ${reportHtml}
               </div>
               <div className="flex gap-2">
                  {/* CSV download might not be ideal for portfolio summary cards, so it's omitted here. */}
-                <Button onClick={handleDownloadPDF} size="sm" variant="outline" disabled>
+                <Button onClick={handleDownloadPDF} size="sm" variant="outline">
                   <FileType className="mr-2 h-4 w-4" /> PDF
                 </Button>
                 <Button onClick={handleShareViaEmail} size="sm" variant="outline">
@@ -576,7 +576,7 @@ ${reportHtml}
               </div>
               <div className="flex gap-2">
                 {/* CSV download for team workload might be relevant if detailed project lists are included in CSV, but for simplicity, keeping consistent action buttons. */}
-                <Button onClick={handleDownloadPDF} size="sm" variant="outline" disabled>
+                <Button onClick={handleDownloadPDF} size="sm" variant="outline">
                   <FileType className="mr-2 h-4 w-4" /> PDF
                 </Button>
                 <Button onClick={handleShareViaEmail} size="sm" variant="outline">
@@ -646,5 +646,6 @@ ${reportHtml}
     </div>
   );
 }
+
 
 
