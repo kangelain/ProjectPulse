@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Rocket, LayoutDashboard, ShieldAlert, UserCircle, LogIn, LogOut } from 'lucide-react';
+import { Rocket, LayoutDashboard, ShieldAlert, UserCircle, LogIn, LogOut, FileText } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -30,6 +30,12 @@ export function Header() {
             <Link href="/risk-assessment">
               <ShieldAlert className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
               Risk Assessment
+            </Link>
+          </Button>
+          <Button variant="ghost" asChild className="px-2 sm:px-3 text-xs sm:text-sm">
+            <Link href="/reports">
+              <FileText className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              Reports
             </Link>
           </Button>
         </nav>
