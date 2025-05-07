@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react'; 
@@ -119,7 +118,7 @@ export function ProjectBudgetCalculator() {
                         <FormLabel className="sr-only">Category</FormLabel>
                         <Select onValueChange={formField.onChange} defaultValue={formField.value}>
                           <FormControl>
-                            <SelectTrigger className="h-9 text-xs"> {/* Adjusted size */}
+                             <SelectTrigger className="h-9 text-xs"> {/* Adjusted size */}
                               <SelectValue placeholder="Select Category" />
                             </SelectTrigger>
                           </FormControl>

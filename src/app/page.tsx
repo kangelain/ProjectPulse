@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { List, BarChart3, GanttChartSquare, Briefcase, PieChart } from 'lucide-react';
 
+
 export default function HomePage() {
   const [selectedPortfolio, setSelectedPortfolio] = useState<string>('all');
 
@@ -30,15 +31,15 @@ export default function HomePage() {
           Overview of projects. Select a portfolio to filter or view detailed timelines.
         </p>
       </div>
-      
+
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"> {/* Reduced bottom margin */}
         <Select onValueChange={setSelectedPortfolio} defaultValue="all">
-          <SelectTrigger className="w-full sm:w-[300px] text-sm h-10"> {/* Standardized height */}
-            <div className="flex items-center">
-              <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
-              <SelectValue placeholder="Select a portfolio" />
-            </div>
-          </SelectTrigger>
+            <SelectTrigger className="w-full sm:w-[300px] text-sm h-10"> {/* Standardized height */}
+              <div className="flex items-center">
+                <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Select a portfolio" />
+              </div>
+            </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Portfolios</SelectItem>
             {portfolioNames.map(portfolio => (
@@ -92,7 +93,7 @@ export default function HomePage() {
             <ProjectProgressChart projects={filteredProjects} />
           </div>
         </TabsContent>
-        
+
         <TabsContent value="timeline" className="mt-6">
           <div className="grid grid-cols-1 gap-5">
              <ProjectTimelineGantt projects={filteredProjects} />

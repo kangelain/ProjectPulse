@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -23,6 +22,7 @@ import { useForm, Controller, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
+import { FormControl as ShadCNFormControl } from '@/components/ui/form';
 
 
 const resourceStatusColors: Record<ResourceStatus, string> = {
@@ -215,10 +215,12 @@ export default function ResourceManagementPage() {
             className="h-10"
           />
           <Select value={resourceTypeFilter} onValueChange={(value) => setResourceTypeFilter(value as ResourceType | 'all')}>
-            <SelectTrigger className="h-10">
-              <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
-              <SelectValue placeholder="Filter by Type" />
-            </SelectTrigger>
+            <ShadCNFormControl>
+                <SelectTrigger className="h-10">
+                <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="Filter by Type" />
+                </SelectTrigger>
+            </ShadCNFormControl>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
               {Object.keys(resourceTypeIcons).map(type => (
@@ -227,10 +229,12 @@ export default function ResourceManagementPage() {
             </SelectContent>
           </Select>
           <Select value={resourceStatusFilter} onValueChange={(value) => setResourceStatusFilter(value as ResourceStatus | 'all')}>
-            <SelectTrigger className="h-10">
-              <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
-              <SelectValue placeholder="Filter by Status" />
-            </SelectTrigger>
+            <ShadCNFormControl>
+                <SelectTrigger className="h-10">
+                <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="Filter by Status" />
+                </SelectTrigger>
+            </ShadCNFormControl>
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
                {Object.keys(resourceStatusColors).map(status => (
@@ -405,12 +409,14 @@ export default function ResourceManagementPage() {
                   <div className="space-y-1">
                     <Label htmlFor="resourceType">Type</Label>
                     <Select onValueChange={field.onChange} value={field.value}>
+                      <ShadCNFormControl>
                         <SelectTrigger id="resourceType"><SelectValue placeholder="Select type" /></SelectTrigger>
-                        <SelectContent>
-                            {(['Personnel', 'Equipment', 'Facility'] as ResourceType[]).map(type => (
-                                <SelectItem key={type} value={type}>{type}</SelectItem>
-                            ))}
-                        </SelectContent>
+                      </ShadCNFormControl>
+                      <SelectContent>
+                          {(['Personnel', 'Equipment', 'Facility'] as ResourceType[]).map(type => (
+                              <SelectItem key={type} value={type}>{type}</SelectItem>
+                          ))}
+                      </SelectContent>
                     </Select>
                     {resourceForm.formState.errors.type && <p className="text-xs text-destructive">{resourceForm.formState.errors.type.message}</p>}
                   </div>
@@ -423,7 +429,9 @@ export default function ResourceManagementPage() {
                   <div className="space-y-1">
                     <Label htmlFor="resourceStatus">Status</Label>
                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger id="resourceStatus"><SelectValue placeholder="Select status" /></SelectTrigger>
+                       <ShadCNFormControl>
+                          <SelectTrigger id="resourceStatus"><SelectValue placeholder="Select status" /></SelectTrigger>
+                       </ShadCNFormControl>
                         <SelectContent>
                             {(['Available', 'Partially Allocated', 'Fully Allocated', 'Maintenance'] as ResourceStatus[]).map(status => (
                                 <SelectItem key={status} value={status}>{status}</SelectItem>
@@ -508,8 +516,10 @@ export default function ResourceManagementPage() {
                   <div className="space-y-1">
                     <Label htmlFor="allocationResource">Resource</Label>
                     <Select onValueChange={field.onChange} value={field.value} disabled={!!editingResource}>
+                      <ShadCNFormControl>
                         <SelectTrigger id="allocationResource"><SelectValue placeholder="Select resource" /></SelectTrigger>
-                        <SelectContent>
+                      </ShadCNFormControl>
+                      <SelectContent>
                             {resources.map(res => (
                                 <SelectItem key={res.id} value={res.id}>{res.name} ({res.type})</SelectItem>
                             ))}
@@ -526,7 +536,9 @@ export default function ResourceManagementPage() {
                   <div className="space-y-1">
                     <Label htmlFor="allocationProject">Project</Label>
                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger id="allocationProject"><SelectValue placeholder="Select project" /></SelectTrigger>
+                        <ShadCNFormControl>
+                            <SelectTrigger id="allocationProject"><SelectValue placeholder="Select project" /></SelectTrigger>
+                        </ShadCNFormControl>
                         <SelectContent>
                             {projects.map(proj => (
                                 <SelectItem key={proj.id} value={proj.id}>{proj.name}</SelectItem>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { AssessProjectRiskInput, AssessProjectRiskOutput } from '@/ai/flows/risk-assessment';

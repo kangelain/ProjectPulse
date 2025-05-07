@@ -24,6 +24,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useToast } from "@/hooks/use-toast";
 import { predictProjectPerformance, type PredictProjectPerformanceInput, type PredictProjectPerformanceOutput, type PortfolioMetricSummary } from '@/ai/flows/predict-project-performance-flow';
 import { Alert, AlertDescription, AlertTitle as ShadcnAlertTitle } from '@/components/ui/alert';
+import { FormControl } from '@/components/ui/form'; // Added for MultiSelectFilter
 
 
 const statusStyles: Record<ProjectStatus, { badge: string, progress: string, text?: string }> = {
@@ -726,12 +727,14 @@ export default function ReportsPage() {
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" role="combobox" aria-expanded={open} className="w-full sm:w-[180px] justify-between h-9 text-xs px-3"> <div className="flex items-center">
-              <FilterIcon className="mr-1.5 h-3.5 w-3.5 shrink-0 opacity-50" /> 
-              {title}
-            </div>
-            <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" /> 
-          </Button>
+          <FormControl>
+            <Button variant="outline" role="combobox" aria-expanded={open} className="w-full sm:w-[180px] justify-between h-9 text-xs px-3"> <div className="flex items-center">
+                <FilterIcon className="mr-1.5 h-3.5 w-3.5 shrink-0 opacity-50" /> 
+                {title}
+              </div>
+              <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" /> 
+            </Button>
+          </FormControl>
         </PopoverTrigger>
         <PopoverContent className="w-[200px] p-0">
           <Command>
@@ -1234,5 +1237,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-
-

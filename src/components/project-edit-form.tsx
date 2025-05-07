@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Project, KeyMilestone, ProjectStatus } from '@/types/project';
@@ -21,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { mockProjects } from '@/lib/mock-data'; // For user list simulation
+import { Badge } from '@/components/ui/badge'; // Added for displaying selected users
 
 const milestoneSchema = z.object({
   id: z.string(),
@@ -245,21 +245,20 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
               <FormItem>
                 <FormLabel className="flex items-center gap-2"><Users className="h-4 w-4" /> Assigned Team Members (Optional)</FormLabel>
                 <Select
-                  onValueChange={(value) => {
+                  onValueChange={(selectedUser) => { // `value` here is the single user selected/deselected in this interaction
                     const currentSelection = field.value || [];
-                    const newSelection = currentSelection.includes(value)
-                      ? currentSelection.filter(v => v !== value)
-                      : [...currentSelection, value];
+                    const newSelection = currentSelection.includes(selectedUser)
+                      ? currentSelection.filter(u => u !== selectedUser)
+                      : [...currentSelection, selectedUser];
                     field.onChange(newSelection);
                   }}
-                  // `value` prop for multi-select with shadcn/ui needs custom handling or a multi-select component
-                  // This simple Select is for single user selection logic per click.
-                  // For actual multi-select UI, consider a component like https://shadcn-tag.vercel.app/
+                  // The `value` prop on Select itself is not used for multi-select indication here,
+                  // rather the visual feedback is through the badge list and checkmarks.
                   disabled={isSubmitting}
                 >
                   <FormControl>
                      <SelectTrigger className="h-auto min-h-10 py-2">
-                        <SelectValue placeholder="Select team members to assign/unassign" />
+                        <SelectValue placeholder="Select/Deselect team members" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>

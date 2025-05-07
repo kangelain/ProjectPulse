@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -98,7 +97,7 @@ export default function LoginPage() {
                     <FormLabel className="text-xs font-medium">Select Role (Demo)</FormLabel> {/* Smaller label */}
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger className="h-10 text-sm"> {/* Consistent height and text size */}
+                         <SelectTrigger className="h-10 text-sm"> {/* Consistent height and text size */}
                           <SelectValue placeholder="Select a role" />
                         </SelectTrigger>
                       </FormControl>

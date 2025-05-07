@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -185,7 +184,9 @@ export function RoiCalculator() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs font-medium">Initial Investment ($)</FormLabel>
-                      <FormControl><Input type="number" placeholder="e.g., 100000" {...field} className="h-9 text-xs" /></FormControl>
+                      <FormControl>
+                        <Input type="number" placeholder="e.g., 100000" {...field} className="h-9 text-xs" />
+                      </FormControl>
                       <FormMessage className="text-xs"/>
                     </FormItem>
                   )}
@@ -196,17 +197,19 @@ export function RoiCalculator() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs font-medium">Project Lifespan (Years)</FormLabel>
-                      <FormControl><Input type="number" placeholder="e.g., 5" {...field} className="h-9 text-xs" onChange={(e) => {
-                          field.onChange(e);
-                          const newLifespan = parseInt(e.target.value, 10);
-                          if (!isNaN(newLifespan) && newLifespan > 0 && newLifespan <= 20) {
-                              const currentCashFlows = form.getValues("cashFlows");
-                              const newCashFlowsArray = Array(newLifespan).fill(null).map((_,i) => currentCashFlows[i] || {value: 25000});
-                              replace(newCashFlowsArray);
-                          } else if (newLifespan === 0 || isNaN(newLifespan)) {
-                              replace([]); 
-                          }
-                      }} /></FormControl>
+                      <FormControl>
+                        <Input type="number" placeholder="e.g., 5" {...field} className="h-9 text-xs" onChange={(e) => {
+                            field.onChange(e);
+                            const newLifespan = parseInt(e.target.value, 10);
+                            if (!isNaN(newLifespan) && newLifespan > 0 && newLifespan <= 20) {
+                                const currentCashFlows = form.getValues("cashFlows");
+                                const newCashFlowsArray = Array(newLifespan).fill(null).map((_,i) => currentCashFlows[i] || {value: 25000});
+                                replace(newCashFlowsArray);
+                            } else if (newLifespan === 0 || isNaN(newLifespan)) {
+                                replace([]); 
+                            }
+                        }} />
+                        </FormControl>
                       <FormMessage className="text-xs"/>
                     </FormItem>
                   )}
@@ -217,7 +220,9 @@ export function RoiCalculator() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs font-medium">Discount Rate (%)</FormLabel>
-                      <FormControl><Input type="number" placeholder="e.g., 10 for 10%" {...field} className="h-9 text-xs"/></FormControl>
+                      <FormControl>
+                        <Input type="number" placeholder="e.g., 10 for 10%" {...field} className="h-9 text-xs"/>
+                      </FormControl>
                       <FormDescription className="text-xs mt-1">Annual rate to discount future cash flows.</FormDescription> {/* Adjusted margin */}
                       <FormMessage className="text-xs"/>
                     </FormItem>
