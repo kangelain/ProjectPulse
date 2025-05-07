@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { Resource, ResourceAllocation, ResourceStatus, ResourceType } from '@/types/resource';
 import type { Project } from '@/types/project';
 import { mockResources, mockResourceAllocations, mockProjects } from '@/lib/mock-data';
@@ -625,3 +625,4 @@ const InputWithIcon = React.forwardRef<HTMLInputElement, React.InputHTMLAttribut
   }
 );
 InputWithIcon.displayName = "InputWithIcon";
+
