@@ -7,7 +7,7 @@ import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, UserCircle, ShieldCheck, Briefcase, Loader2, Mail } from 'lucide-react';
+import { LogOut, UserCircle, ShieldCheck, Loader2, Mail } from 'lucide-react'; // Removed Briefcase
 import { Badge } from '@/components/ui/badge';
 
 export default function ProfilePage() {
@@ -34,47 +34,47 @@ export default function ProfilePage() {
   const userEmail = user.email || `${user.username.toLowerCase().replace(/\s+/g, '.')}@example.com`; // Demo email
 
   return (
-    <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
-      <Card className="max-w-2xl mx-auto shadow-2xl">
+    <div className="container mx-auto py-10 px-4"> {/* Simplified container padding */}
+      <Card className="max-w-lg mx-auto shadow-xl"> {/* Adjusted max-width and shadow */}
         <CardHeader className="text-center items-center pt-8 pb-6">
-          <Avatar className="h-28 w-28 mb-5 border-4 border-primary shadow-md">
+          <Avatar className="h-24 w-24 mb-4 border-2 border-primary/50 shadow-sm"> {/* Slightly smaller avatar, softer border */}
             <AvatarImage src={`https://picsum.photos/seed/${user.username}/200`} alt={user.username} data-ai-hint="profile avatar" />
-            <AvatarFallback className="text-4xl bg-secondary text-secondary-foreground">
+            <AvatarFallback className="text-3xl bg-secondary text-secondary-foreground"> {/* Adjusted text size */}
               {initial}
             </AvatarFallback>
           </Avatar>
-          <CardTitle className="text-3xl font-bold text-foreground">{user.username}</CardTitle>
-          <CardDescription className="text-md text-muted-foreground pt-1">Your personal profile and settings.</CardDescription>
+          <CardTitle className="text-2xl font-semibold text-foreground">{user.username}</CardTitle> {/* Adjusted title size */}
+          <CardDescription className="text-sm text-muted-foreground pt-1">Your personal profile and settings.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-5 px-6 sm:px-8 pb-8">
-          <div className="flex items-center space-x-4 p-4 bg-secondary/50 rounded-lg shadow-sm">
-            <UserCircle className="h-7 w-7 text-primary flex-shrink-0" />
+        <CardContent className="space-y-4 px-6 sm:px-8 pb-8"> {/* Adjusted spacing */}
+          <div className="flex items-center space-x-3 p-3 bg-secondary/50 rounded-md shadow-xs"> {/* Softer background, smaller padding, subtle shadow */}
+            <UserCircle className="h-6 w-6 text-primary flex-shrink-0" /> {/* Adjusted icon size */}
             <div>
-              <p className="text-sm text-muted-foreground font-medium">Username</p>
-              <p className="font-semibold text-lg text-foreground">{user.username}</p>
+              <p className="text-xs text-muted-foreground font-medium">Username</p>
+              <p className="font-medium text-md text-foreground">{user.username}</p> {/* Adjusted text size */}
             </div>
           </div>
           
-          <div className="flex items-center space-x-4 p-4 bg-secondary/50 rounded-lg shadow-sm">
-            <Mail className="h-7 w-7 text-primary flex-shrink-0" />
+          <div className="flex items-center space-x-3 p-3 bg-secondary/50 rounded-md shadow-xs">
+            <Mail className="h-6 w-6 text-primary flex-shrink-0" />
             <div>
-              <p className="text-sm text-muted-foreground font-medium">Email (Demo)</p>
-              <p className="font-semibold text-lg text-foreground">{userEmail}</p>
+              <p className="text-xs text-muted-foreground font-medium">Email (Demo)</p>
+              <p className="font-medium text-md text-foreground">{userEmail}</p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-4 p-4 bg-secondary/50 rounded-lg shadow-sm">
-            <ShieldCheck className="h-7 w-7 text-primary flex-shrink-0" />
+          <div className="flex items-center space-x-3 p-3 bg-secondary/50 rounded-md shadow-xs">
+            <ShieldCheck className="h-6 w-6 text-primary flex-shrink-0" />
             <div>
-              <p className="text-sm text-muted-foreground font-medium">Role</p>
-              <Badge variant="default" className="font-semibold text-md px-4 py-1.5 bg-primary/10 text-primary border border-primary/30">
+              <p className="text-xs text-muted-foreground font-medium">Role</p>
+              <Badge variant="secondary" className="font-medium text-sm px-3 py-1"> {/* Changed variant to secondary for Asana-like subtlety */}
                 {user.role}
               </Badge>
             </div>
           </div>
 
-          <Button onClick={logout} className="w-full mt-8 h-12 text-base" variant="destructive" size="lg">
-            <LogOut className="mr-2 h-5 w-5" /> Logout
+          <Button onClick={logout} className="w-full mt-6 h-11 text-sm font-semibold" variant="destructive" size="lg"> {/* Adjusted margin and height */}
+            <LogOut className="mr-2 h-4 w-4" /> Logout
           </Button>
         </CardContent>
       </Card>

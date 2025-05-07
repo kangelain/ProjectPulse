@@ -38,26 +38,30 @@ const statusIcons: Record<ProjectStatus, React.ElementType> = {
   'Planning': Activity,
 };
 
-const statusColors: Record<ProjectStatus, string> = {
-  'On Track': 'bg-green-500 hover:bg-green-600 text-white',
-  'At Risk': 'bg-red-500 hover:bg-red-600 text-white',
-  'Delayed': 'bg-yellow-500 hover:bg-yellow-600 text-black', // Ensure contrast for yellow
-  'Completed': 'bg-blue-500 hover:bg-blue-600 text-white',
-  'Planning': 'bg-gray-500 hover:bg-gray-600 text-white',
+// Asana uses subtle status colors, often within text or small indicators.
+// We will use a combination of background tints and text colors for clarity.
+const statusStyles: Record<ProjectStatus, { badge: string, progress: string, text?: string }> = {
+  'On Track': { badge: 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700', progress: 'bg-green-500' },
+  'At Risk': { badge: 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700', progress: 'bg-red-500' },
+  'Delayed': { badge: 'bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-600', progress: 'bg-yellow-500' },
+  'Completed': { badge: 'bg-primary/10 text-primary border-primary/30', progress: 'bg-primary' },
+  'Planning': { badge: 'bg-secondary text-secondary-foreground border-border', progress: 'bg-secondary-foreground' },
 };
 
-const priorityColors: Record<Project['priority'], string> = {
-  High: 'border-red-600 text-red-700 dark:text-red-500 bg-red-100 dark:bg-red-900/30',
-  Medium: 'border-yellow-600 text-yellow-700 dark:text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30',
-  Low: 'border-green-600 text-green-700 dark:text-green-500 bg-green-100 dark:bg-green-900/30',
+const priorityBadgeColors: Record<Project['priority'], string> = {
+  High: 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700',
+  Medium: 'bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-600',
+  Low: 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700',
 };
+
 
 export function ProjectStatusCard({ project }: ProjectStatusCardProps) {
   const StatusIcon = statusIcons[project.status] || Activity;
+  const currentStatusStyles = statusStyles[project.status] || statusStyles['Planning'];
 
   const formatDate = (dateString: string) => {
     try {
-      return format(parseISO(dateString), 'MMM d, yy'); // Shortened year
+      return format(parseISO(dateString), 'MMM d, yy'); 
     } catch (error) {
       return 'N/A';
     }
@@ -68,54 +72,55 @@ export function ProjectStatusCard({ project }: ProjectStatusCardProps) {
 
   return (
     <Link href={`/projects/${project.id}`} className="block h-full group">
-      <Card className="flex flex-col h-full shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out group-hover:border-primary/50">
-        <CardHeader className="pb-3 pt-5 px-5">
+      <Card className="flex flex-col h-full shadow-md hover:shadow-lg transition-shadow duration-200 ease-in-out group-hover:border-primary/40">
+        <CardHeader className="pb-3 pt-4 px-4"> {/* Reduced padding */}
           <div className="flex justify-between items-start gap-2">
-            <CardTitle className="text-lg font-semibold text-primary leading-tight group-hover:text-primary/90 transition-colors">
+            <CardTitle className="text-md font-semibold text-foreground leading-tight group-hover:text-primary transition-colors line-clamp-1"> {/* Slightly smaller, line-clamp */}
               {project.name}
             </CardTitle>
             <Badge
+              variant="outline"
               className={cn(
-                'text-xs font-semibold shrink-0 px-2.5 py-1',
-                statusColors[project.status]
+                'text-xs font-medium shrink-0 px-2 py-0.5', // Smaller padding
+                currentStatusStyles.badge
               )}
             >
-              <StatusIcon className="mr-1.5 h-3.5 w-3.5" />
+              <StatusIcon className="mr-1 h-3 w-3" /> {/* Slightly smaller icon */}
               {project.status}
             </Badge>
           </div>
-          <CardDescription className="text-sm pt-1.5 line-clamp-2 h-[40px] text-muted-foreground">
+          <CardDescription className="text-xs pt-1 line-clamp-2 h-[32px] text-muted-foreground"> {/* Smaller text, adjusted height */}
             {project.description}
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex-grow space-y-4 px-5 pb-4">
+        <CardContent className="flex-grow space-y-3 px-4 pb-3"> {/* Reduced padding and spacing */}
           <div>
-            <div className="mb-1.5 flex justify-between text-xs text-muted-foreground">
+            <div className="mb-1 flex justify-between text-xs text-muted-foreground">
               <span>Progress</span>
               <span className="font-medium text-foreground">{project.completionPercentage}%</span>
             </div>
-            <Progress value={project.completionPercentage} aria-label={`${project.completionPercentage}% complete`} className="h-2.5"/>
+            <Progress value={project.completionPercentage} aria-label={`${project.completionPercentage}% complete`} className="h-2" indicatorClassName={currentStatusStyles.progress}/> {/* Slimmer progress bar */}
           </div>
           
-          <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-xs">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs"> {/* Reduced gaps */}
             {[
               { icon: CalendarDays, label: "Start", value: formatDate(project.startDate) },
               { icon: CalendarDays, label: "End", value: formatDate(project.endDate) },
               { icon: Users, label: "Lead", value: project.teamLead },
-              { icon: Flag, label: "Priority", valueComponent: <Badge variant="outline" className={cn("ml-1 px-1.5 py-0.5 text-[0.7rem] leading-tight", priorityColors[project.priority])}>{project.priority}</Badge> },
+              { icon: Flag, label: "Priority", valueComponent: <Badge variant="outline" className={cn("ml-1 px-1.5 py-0 text-[0.65rem] leading-tight", priorityBadgeColors[project.priority])}>{project.priority}</Badge> }, // Use secondary for subtlety
               { icon: DollarSign, label: "Budget", value: `$${project.budget.toLocaleString()}` },
               { icon: ListChecks, label: "Milestones", value: `${completedMilestones}/${totalMilestones}` },
             ].map((item, index) => (
               <div key={index} className="flex items-center text-muted-foreground">
-                <item.icon className="mr-1.5 h-3.5 w-3.5 text-accent flex-shrink-0" />
-                <span className="font-medium text-foreground/80">{item.label}:</span>
-                {item.value && <span className="ml-1 truncate">{item.value}</span>}
+                <item.icon className="mr-1 h-3.5 w-3.5 text-muted-foreground/70 flex-shrink-0" /> {/* Consistent muted icon color */}
+                <span className="font-medium text-foreground/80 mr-0.5">{item.label}:</span>
+                {item.value && <span className="ml-0.5 truncate">{item.value}</span>}
                 {item.valueComponent}
               </div>
             ))}
           </div>
         </CardContent>
-        <CardFooter className="text-xs text-muted-foreground pt-3 pb-4 px-5 border-t mt-auto">
+        <CardFooter className="text-xs text-muted-foreground pt-2 pb-3 px-4 border-t mt-auto"> {/* Reduced padding */}
           Last updated: {formatDate(project.lastUpdated)}
         </CardFooter>
       </Card>

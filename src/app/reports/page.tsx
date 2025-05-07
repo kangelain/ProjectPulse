@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, parseISO, differenceInDays, isValid, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import { cn } from '@/lib/utils';
@@ -20,25 +20,25 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DateRangePicker } from '@/components/date-range-picker';
-import { ListChecks, Briefcase, Users, TrendingUp, PieChart, UsersRound, AlertTriangle, Clock, CheckCircle2, Activity, Loader2, FileText, Download, Mail, FileType, Search, Filter as FilterIcon, Check, XCircle, ChevronsUpDown, Brain, HelpCircle, LineChart as LineChartIcon, TrendingDown } from 'lucide-react';
+import { ListChecks, Briefcase, Users, TrendingUp, PieChart, UsersRound, AlertTriangle, Clock, CheckCircle2, Activity, Loader2, Download, Mail, FileType, Search, Filter as FilterIcon, Check, XCircle, ChevronsUpDown, Brain, HelpCircle, LineChart as LineChartIcon, TrendingDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from "@/hooks/use-toast";
 import { predictProjectPerformance, type PredictProjectPerformanceInput, type PredictProjectPerformanceOutput, type PortfolioMetricSummary } from '@/ai/flows/predict-project-performance-flow';
 import { Alert, AlertDescription, AlertTitle as ShadcnAlertTitle } from '@/components/ui/alert';
 
 
-const statusColors: Record<ProjectStatus, string> = {
-  'On Track': 'bg-green-500 text-white',
-  'At Risk': 'bg-red-500 text-white',
-  'Delayed': 'bg-yellow-500 text-black',
-  'Completed': 'bg-blue-500 text-white',
-  'Planning': 'bg-gray-500 text-white',
+const statusStyles: Record<ProjectStatus, { badge: string, progress: string, text?: string }> = {
+  'On Track': { badge: 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700', progress: 'bg-green-500' },
+  'At Risk': { badge: 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700', progress: 'bg-red-500' },
+  'Delayed': { badge: 'bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-600', progress: 'bg-yellow-500' },
+  'Completed': { badge: 'bg-primary/10 text-primary border-primary/30', progress: 'bg-primary' },
+  'Planning': { badge: 'bg-secondary text-secondary-foreground border-border', progress: 'bg-secondary-foreground' },
 };
 
 const priorityColors: Record<Project['priority'], string> = {
-  High: 'border-red-600 text-red-700 dark:text-red-500 bg-red-50 dark:bg-red-900/30',
-  Medium: 'border-yellow-600 text-yellow-700 dark:text-yellow-500 bg-yellow-50 dark:bg-yellow-900/30',
-  Low: 'border-green-600 text-green-700 dark:text-green-500 bg-green-50 dark:bg-green-900/30',
+  High: 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700',
+  Medium: 'bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-600',
+  Low: 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700',
 };
 
 const statusIcons: Record<ProjectStatus, React.ElementType> = {
@@ -252,9 +252,8 @@ export default function ReportsPage() {
   }, [filteredProjects]);
 
 
-   // Calculate basic trend indicators for AI input
    const calculateTrendIndicators = (projects: Project[]): { completionTrend: 'Improving' | 'Declining' | 'Stable', budgetTrend: 'Improving' | 'Worsening' | 'Stable' } => {
-    if (projects.length < 5) return { completionTrend: 'Stable', budgetTrend: 'Stable' }; // Not enough data for meaningful trend
+    if (projects.length < 5) return { completionTrend: 'Stable', budgetTrend: 'Stable' }; 
 
     const sortedByStartDate = [...projects].sort((a, b) => parseISO(a.startDate).getTime() - parseISO(b.startDate).getTime());
     const olderProjects = sortedByStartDate.slice(0, Math.floor(sortedByStartDate.length / 2));
@@ -263,7 +262,7 @@ export default function ReportsPage() {
     const avgCompletionOlder = olderProjects.reduce((sum, p) => sum + p.completionPercentage, 0) / (olderProjects.length || 1);
     const avgCompletionNewer = newerProjects.reduce((sum, p) => sum + p.completionPercentage, 0) / (newerProjects.length || 1);
 
-    const budgetRatio = (p: Project) => p.budget > 0 ? p.spent / p.budget : 1; // 1 means on budget
+    const budgetRatio = (p: Project) => p.budget > 0 ? p.spent / p.budget : 1; 
     const avgBudgetRatioOlder = olderProjects.reduce((sum, p) => sum + budgetRatio(p), 0) / (olderProjects.length || 1);
     const avgBudgetRatioNewer = newerProjects.reduce((sum, p) => sum + budgetRatio(p), 0) / (newerProjects.length || 1);
     
@@ -272,7 +271,7 @@ export default function ReportsPage() {
     else if (avgCompletionNewer < avgCompletionOlder * 0.95) completionTrend = 'Declining';
 
     let budgetTrend: 'Improving' | 'Worsening' | 'Stable' = 'Stable';
-    if (avgBudgetRatioNewer < avgBudgetRatioOlder * 0.95) budgetTrend = 'Improving'; // Lower ratio is better
+    if (avgBudgetRatioNewer < avgBudgetRatioOlder * 0.95) budgetTrend = 'Improving'; 
     else if (avgBudgetRatioNewer > avgBudgetRatioOlder * 1.05) budgetTrend = 'Worsening';
 
     setCalculatedTrendIndicators([
@@ -299,7 +298,7 @@ export default function ReportsPage() {
       const overallBudgetVarRatio = totalBudget > 0 ? totalSpent / totalBudget : 1;
       
       const aiPortfolioSummaries: PortfolioMetricSummary[] = portfolioSummaries
-        .sort((a,b) => b.totalProjects - a.totalProjects) // Top portfolios by project count
+        .sort((a,b) => b.totalProjects - a.totalProjects) 
         .slice(0, 5)
         .map(ps => ({
             portfolioName: ps.portfolioName,
@@ -337,10 +336,10 @@ export default function ReportsPage() {
       fetchTrendsAndPredictions();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, filteredProjects]); // Re-fetch if tab changes or filtered data changes.
+  }, [activeTab, filteredProjects]); 
 
   
-  const handleFilterToggle = <T,>(set: Set<T>, item: T, setter: React.Dispatch<React.SetStateAction<Set<T>>>) => {
+  const handleFilterToggle = <T,>(set: Set<T>, item: T, setter: React.Dispatch<React.SetStateAction<Set<T>>>>) => {
     const newSet = new Set(set);
     if (newSet.has(item)) {
       newSet.delete(item);
@@ -422,7 +421,7 @@ export default function ReportsPage() {
       if (metrics) {
         if (project.status === 'Completed') {
           daysRemainingDisplay = 'Completed';
-        } else if (metrics.daysRemaining < 0) {
+        } else if (metrics.isOverdue) {
           daysRemainingDisplay = `${Math.abs(metrics.daysRemaining)} days overdue`;
         } else {
           daysRemainingDisplay = `${metrics.daysRemaining} days remaining`;
@@ -499,8 +498,8 @@ export default function ReportsPage() {
     let html = `<html><head><meta charset="UTF-8"><style>
       body { font-family: Helvetica, Arial, sans-serif; font-size: 10pt; color: #333; margin: 20px; }
       table { border-collapse: collapse; width: 100%; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-      th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; vertical-align: top; }
-      th { background-color: #f8fafc; color: #4a5568; font-weight: 600; text-transform: uppercase; font-size: 0.85em;}
+      th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: top; font-size: 0.9em; } /* Smaller padding & font */
+      th { background-color: #f8fafc; color: #4a5568; font-weight: 600; text-transform: uppercase; font-size: 0.8em;} /* Smaller font */
       tr:nth-child(even) { background-color: #f7fafc; }
       tr:hover { background-color: #edf2f7; }
       .currency { text-align: right; } .percentage { text-align: right; }
@@ -508,15 +507,18 @@ export default function ReportsPage() {
       .status-completed { color: #3182ce; } .status-planning { color: #718096; }
       .priority-high { color: #c53030; } .priority-medium { color: #d69e2e; } .priority-low { color: #2f855a; }
       .variance-positive { color: #38a169; } .variance-negative { color: #e53e3e; }
-      h1 { font-size: 1.8em; color: #2d3748; margin-bottom: 0.5em; }
-      h2 { font-size: 1.4em; color: #4a5568; margin-bottom: 0.5em; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3em; }
-      .card { border: 1px solid #e2e8f0; border-radius: 0.375rem; padding: 1.5rem; margin-bottom: 1.5rem; background-color: #fff; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); display: inline-block; width: calc(33% - 2rem); vertical-align: top; margin-right: 1rem; box-sizing: border-box;}
+      h1 { font-size: 1.6em; color: #2d3748; margin-bottom: 0.5em; } /* Adjusted size */
+      h2 { font-size: 1.2em; color: #4a5568; margin-bottom: 0.5em; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3em; } /* Adjusted size */
+      .card { border: 1px solid #e2e8f0; border-radius: 0.375rem; padding: 1rem; margin-bottom: 1rem; background-color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: inline-block; width: calc(33% - 1.5rem); vertical-align: top; margin-right: 1rem; box-sizing: border-box;} /* Adjusted padding and width calc */
       .flex-container { display: flex; flex-wrap: wrap; gap: 1rem; }
-      .progress-bar { background-color: #e2e8f0; border-radius: 0.25rem; height: 0.5rem; overflow: hidden; margin-top: 0.25rem; }
+      .progress-bar { background-color: #e2e8f0; border-radius: 0.25rem; height: 0.4rem; overflow: hidden; margin-top: 0.25rem; } /* Slimmer progress bar */
       .progress-bar-inner { background-color: #4299e1; height: 100%; }
-      .filter-info { margin-bottom: 20px; padding: 10px; background-color: #f9f9f9; border: 1px solid #eee; border-radius: 4px; font-size: 0.9em;}
+      .filter-info { margin-bottom: 15px; padding: 8px; background-color: #f9f9f9; border: 1px solid #eee; border-radius: 4px; font-size: 0.85em;} /* Smaller padding and font */
       .trend-improving { color: #38a169; } .trend-declining { color: #e53e3e; } .trend-stable { color: #718096; }
       .confidence-high { font-weight: bold; color: #2f855a; } .confidence-medium { color: #d69e2e; } .confidence-low { color: #a0aec0; }
+      .card-title { font-size: 1.1em; font-weight: 600; margin-bottom: 0.3em; } /* Card title styling */
+      .card-description { font-size: 0.85em; color: #718096; margin-bottom: 0.8em; }
+      ul { padding-left: 20px; margin-top: 0.3em; } li { margin-bottom: 0.2em; }
     </style></head><body><h1>ProjectPulse Report - ${escapeHtml(tab.charAt(0).toUpperCase() + tab.slice(1))}</h1>`;
 
     html += `<div class="filter-info"><strong>Filters Applied:</strong><br/>`;
@@ -532,7 +534,7 @@ export default function ReportsPage() {
 
     if (tab === 'performance') {
       html += `<h2>Project Performance Details (${filteredProjects.length} projects)</h2><table>
-        <thead><tr><th>Project Name</th><th>Status</th><th>Priority</th><th>Completion %</th><th>Budget</th><th>Spent</th><th>Variance</th><th>Start Date</th><th>End Date</th><th>Days Left/Overdue</th><th>Team Lead</th><th>Portfolio</th></tr></thead>
+        <thead><tr><th>Project Name</th><th>Status</th><th>Priority</th><th>Completion %</th><th>Budget</th><th>Spent</th><th>Variance</th><th>Start Date</th><th>End Date</th><th>Timeline</th><th>Team Lead</th><th>Portfolio</th></tr></thead>
         <tbody>`;
       filteredProjects.forEach(project => {
         const metrics = projectMetrics[project.id];
@@ -581,7 +583,7 @@ export default function ReportsPage() {
       html += `</div>`;
     } else if (tab === 'resources') {
       html += `<h2>Team Overview & Workload</h2><table>
-        <thead><tr><th>Team Lead</th><th>Project Count (Filtered)</th><th>Active</th><th>Completed</th><th>Avg. Active Completion %</th><th>Total Budget Managed</th><th>Status Distribution (Active)</th></tr></thead>
+        <thead><tr><th>Team Lead</th><th>Projects (Filtered)</th><th>Active</th><th>Completed</th><th>Avg. Active Comp. %</th><th>Budget Managed</th><th>Active Statuses</th></tr></thead>
         <tbody>`;
       teamLeadWorkloads.forEach(lead => {
         let statusDistHtml = Object.entries(lead.statusDistribution)
@@ -606,7 +608,7 @@ export default function ReportsPage() {
        html += `<h2>Trends & AI Predictions</h2>`;
        html += `<h3>Calculated Trend Indicators (based on current filtered data)</h3><div class="flex-container">`;
        calculatedTrendIndicators.forEach(trend => {
-           html += `<div class="card" style="width: calc(50% - 2rem);">
+           html += `<div class="card" style="width: calc(50% - 1.5rem);">
              <p><strong>Metric:</strong> ${escapeHtml(trend.metricName)}</p>
              <p><strong>Current Value:</strong> ${escapeHtml(trend.currentValue)}</p>
              <p><strong>Trend:</strong> <span class="trend-${trend.trend.toLowerCase()}">${escapeHtml(trend.trendDescription)}</span></p>
@@ -616,7 +618,7 @@ export default function ReportsPage() {
        if (calculatedTrendIndicators.length === 0) html += '<p>Not enough data to calculate simple trends.</p>';
        html += `</div>`;
 
-       html += `<h3>AI-Powered Predictions & Insights</h3>`;
+       html += `<h3 style="margin-top: 20px;">AI-Powered Predictions & Insights</h3>`;
        if (isLoadingTrendsAndPredictions) {
            html += `<p>Loading AI predictions...</p>`;
        } else if (trendsError) {
@@ -624,7 +626,7 @@ export default function ReportsPage() {
        } else if (trendsAndPredictions && trendsAndPredictions.predictions.length > 0) {
            html += `<div class="flex-container">`;
            trendsAndPredictions.predictions.forEach(pred => {
-               html += `<div class="card" style="width: calc(50% - 2rem);">
+               html += `<div class="card" style="width: calc(50% - 1.5rem);">
                    <p><strong>Area:</strong> ${escapeHtml(pred.area)}</p>
                    <p><strong>Prediction:</strong> ${escapeHtml(pred.prediction)}</p>
                    <p><strong>Confidence:</strong> <span class="confidence-${pred.confidence.toLowerCase()}">${escapeHtml(pred.confidence)}</span></p>
@@ -644,7 +646,6 @@ export default function ReportsPage() {
     const reportHtml = generateReportHTML(activeTab);
     const subject = `ProjectPulse Report: ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} (Filtered)`;
     
-    // Attempt to use a simpler text/plain body as fallback if HTML is too long
     let body = `Please find the ${activeTab} report attached or viewable in rich HTML format if your client supports it. This report reflects the currently applied filters.`;
     let mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
@@ -659,17 +660,15 @@ export default function ReportsPage() {
                     variant: "default",
                     duration: 7000,
                   });
-                 // Optionally, still open mailto link for convenience
                  window.location.href = mailtoLink;
             }).catch(err => {
                 console.warn("Could not copy HTML to clipboard, falling back to simple mailto:", err);
-                // Fallback for browsers that might restrict complex clipboard items or if an error occurs
-                if (encodeURIComponent(reportHtml).length < 1800) { // Reduced limit for full HTML in body
+                if (encodeURIComponent(reportHtml).length < 1800) { 
                      mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(reportHtml)}`;
                 }
                 window.location.href = mailtoLink;
             });
-        } catch(e) { // Safari might throw SecurityError with ClipboardItem from a non-user gesture context
+        } catch(e) { 
             console.warn("ClipboardItem approach failed:", e);
             if (encodeURIComponent(reportHtml).length < 1800) {
                  mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(reportHtml)}`;
@@ -677,8 +676,7 @@ export default function ReportsPage() {
             window.location.href = mailtoLink;
         }
     } else {
-         // Fallback for older browsers or if Clipboard API is not fully supported
-        if (encodeURIComponent(reportHtml).length < 1800) { // Check length for direct body inclusion
+        if (encodeURIComponent(reportHtml).length < 1800) { 
             mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(reportHtml)}`;
         } else {
              toast({
@@ -687,7 +685,6 @@ export default function ReportsPage() {
                 variant: "destructive",
                 duration: 9000,
               });
-              // Don't open a mailto link that will likely fail or be truncated.
               return; 
         }
         window.location.href = mailtoLink;
@@ -695,24 +692,16 @@ export default function ReportsPage() {
   };
 
   const handleDownloadPDF = () => {
-    // This is a placeholder. Actual PDF generation needs a library.
     const reportHtml = generateReportHTML(activeTab);
     
-    // Simple print dialog as a pseudo-PDF export
     const printWindow = window.open('', '_blank');
     if (printWindow) {
         printWindow.document.write(reportHtml);
-        printWindow.document.close(); // Necessary for some browsers.
+        printWindow.document.close(); 
         
-        // Delay print to allow content to render, then close
         setTimeout(() => {
             printWindow.print();
-            // Check if the window is still open before trying to close it, as user might close it manually
-            if (!printWindow.closed) {
-                 // Don't auto-close immediately, user might be interacting with print dialog
-                 // printWindow.close(); 
-            }
-        }, 500); // Adjust delay as needed
+        }, 500); 
         toast({
             title: "Print to PDF",
             description: "Your browser's print dialog should appear. Choose 'Save as PDF' or your PDF printer.",
@@ -734,17 +723,16 @@ export default function ReportsPage() {
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" role="combobox" aria-expanded={open} className="w-full sm:w-[200px] justify-between h-10 text-sm">
-            <div className="flex items-center">
-              <FilterIcon className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+          <Button variant="outline" role="combobox" aria-expanded={open} className="w-full sm:w-[180px] justify-between h-9 text-xs px-3"> <div className="flex items-center">
+              <FilterIcon className="mr-1.5 h-3.5 w-3.5 shrink-0 opacity-50" /> 
               {title}
             </div>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" /> 
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[200px] p-0">
           <Command>
-            <CommandInput placeholder={`Search ${title.toLowerCase()}...`} />
+            <CommandInput placeholder={`Search ${title.toLowerCase()}...`} className="text-xs h-9" /> 
             <CommandList>
               <CommandEmpty>No results found.</CommandEmpty>
               <CommandGroup>
@@ -754,9 +742,7 @@ export default function ReportsPage() {
                     onSelect={() => {
                       onValueChange(option);
                     }}
-                    className="text-sm"
-                  >
-                    <Check className={cn("mr-2 h-4 w-4", selectedValues.has(option) ? "opacity-100" : "opacity-0")} />
+                    className="text-xs py-1.5" >
                     {option}
                   </CommandItem>
                 ))}
@@ -772,9 +758,7 @@ export default function ReportsPage() {
                         if (title === 'Team Lead') setSelectedTeamLeads(new Set());
                         if (title === 'Portfolio') setSelectedPortfolios(new Set());
                       }}
-                      className="justify-center text-center text-xs text-muted-foreground"
-                    >
-                      Clear selection
+                      className="justify-center text-center text-xs text-muted-foreground py-1.5" >Clear selection
                     </CommandItem>
                   </CommandGroup>
                 </>
@@ -788,13 +772,13 @@ export default function ReportsPage() {
 
 
   return (
-    <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+    <div className="container mx-auto py-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
         <div className="flex items-center">
-          <LineChartIcon className="h-8 w-8 mr-3 text-primary shrink-0" />
+          <LineChartIcon className="h-7 w-7 mr-2.5 text-primary shrink-0" /> 
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Advanced Reporting</h1>
-            <p className="text-sm text-muted-foreground">Analyze project data with advanced filters, trends, and export options.</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Advanced Reporting</h1> 
+            <p className="text-xs text-muted-foreground">Analyze project data with advanced filters, trends, and export options.</p> 
           </div>
         </div>
          <div className="flex gap-2 flex-wrap sm:flex-nowrap">
@@ -804,137 +788,136 @@ export default function ReportsPage() {
                 else if (activeTab === 'resources') handleDownloadTeamOverviewCSV();
                 else if (activeTab === 'trends') toast({ title: "CSV Export N/A", description: "AI predictions are best viewed online or in HTML format.", variant: "default"});
                 else toast({ title: "CSV Export", description: `CSV export is not available for this tab.`, variant: "default" });
-            }} size="sm" variant="outline" title="Download current view as CSV">
-                <Download className="mr-2 h-4 w-4" /> CSV
+            }} size="sm" variant="outline" title="Download current view as CSV" className="h-9 px-3 text-xs"> 
+                <Download className="mr-1.5 h-3.5 w-3.5" /> CSV 
             </Button>
-            <Button onClick={handleDownloadPDF} size="sm" variant="outline" title="Download current view as PDF (via Print)">
-                <FileType className="mr-2 h-4 w-4" /> PDF
+            <Button onClick={handleDownloadPDF} size="sm" variant="outline" title="Download current view as PDF (via Print)" className="h-9 px-3 text-xs">
+                <FileType className="mr-1.5 h-3.5 w-3.5" /> PDF
             </Button>
-            <Button onClick={handleShareViaEmail} size="sm" variant="outline" title="Share current view via Email">
-                <Mail className="mr-2 h-4 w-4" /> Share
+            <Button onClick={handleShareViaEmail} size="sm" variant="outline" title="Share current view via Email" className="h-9 px-3 text-xs">
+                <Mail className="mr-1.5 h-3.5 w-3.5" /> Share
             </Button>
         </div>
       </div>
       
-      <Card className="mb-8 shadow-md">
-        <CardHeader className="pb-3 pt-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-            <CardTitle className="text-lg font-semibold">Filter Options</CardTitle>
-            <Button variant="ghost" size="sm" onClick={resetFilters} className="text-xs text-muted-foreground hover:text-primary">
-              <XCircle className="mr-1.5 h-3.5 w-3.5" /> Reset Filters
+      <Card className="mb-6 shadow-md"> 
+        <CardHeader className="pb-3 pt-4 px-4"> 
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1.5"> 
+            <CardTitle className="text-md font-semibold">Filter Options</CardTitle> 
+            <Button variant="ghost" size="sm" onClick={resetFilters} className="text-xs text-muted-foreground hover:text-primary h-7 px-2"> 
+              <XCircle className="mr-1 h-3 w-3" /> Reset Filters 
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end pb-4">
-          <Input
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 items-end pb-4 px-4"> <Input
             placeholder="Search projects..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-10 text-sm"
-            prependIcon={<Search className="h-4 w-4 text-muted-foreground" />}
+            className="h-9 text-xs" 
+            prependIcon={<Search className="h-4 w-4 text-muted-foreground" />} 
           />
           <MultiSelectFilter title="Status" options={ALL_STATUSES} selectedValues={selectedStatuses} onValueChange={(status) => handleFilterToggle(selectedStatuses, status as ProjectStatus, setSelectedStatuses)} />
           <MultiSelectFilter title="Priority" options={ALL_PRIORITIES} selectedValues={selectedPriorities} onValueChange={(priority) => handleFilterToggle(selectedPriorities, priority as Project['priority'], setSelectedPriorities)} />
           <MultiSelectFilter title="Team Lead" options={uniqueTeamLeads} selectedValues={selectedTeamLeads} onValueChange={(lead) => handleFilterToggle(selectedTeamLeads, lead, setSelectedTeamLeads)} />
           <MultiSelectFilter title="Portfolio" options={uniquePortfolios} selectedValues={selectedPortfolios} onValueChange={(portfolio) => handleFilterToggle(selectedPortfolios, portfolio, setSelectedPortfolios)} />
-          <DateRangePicker date={dateRange} onDateChange={setDateRange} buttonClassName="h-10 text-sm w-full sm:w-auto" />
+          <DateRangePicker date={dateRange} onDateChange={setDateRange} buttonClassName="h-9 text-xs w-full" /> 
         </CardContent>
       </Card>
 
 
       <Tabs defaultValue="performance" className="w-full" onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
-          <TabsTrigger value="performance" className="text-sm py-2.5">
-            <ListChecks className="mr-2 h-4 w-4" /> Performance ({filteredProjects.length})
+          <TabsTrigger value="performance" className="text-xs py-2"> 
+            <ListChecks className="mr-1.5 h-3.5 w-3.5" /> Performance ({filteredProjects.length}) 
           </TabsTrigger>
-          <TabsTrigger value="portfolio" className="text-sm py-2.5">
-            <Briefcase className="mr-2 h-4 w-4" /> Portfolios ({portfolioSummaries.length})
+          <TabsTrigger value="portfolio" className="text-xs py-2">
+            <Briefcase className="mr-1.5 h-3.5 w-3.5" /> Portfolios ({portfolioSummaries.length})
           </TabsTrigger>
-          <TabsTrigger value="resources" className="text-sm py-2.5">
-            <UsersRound className="mr-2 h-4 w-4" /> Team ({teamLeadWorkloads.length})
+          <TabsTrigger value="resources" className="text-xs py-2">
+            <UsersRound className="mr-1.5 h-3.5 w-3.5" /> Team ({teamLeadWorkloads.length})
           </TabsTrigger>
-          <TabsTrigger value="trends" className="text-sm py-2.5">
-            <Brain className="mr-2 h-4 w-4" /> Trends & AI Insights
+          <TabsTrigger value="trends" className="text-xs py-2">
+            <Brain className="mr-1.5 h-3.5 w-3.5" /> Trends &amp; AI Insights
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="performance" className="mt-6">
+        <TabsContent value="performance" className="mt-4"> 
           <Card className="shadow-lg">
-            <CardHeader className="pb-4">
-                <CardTitle className="text-2xl">Project Performance Details</CardTitle>
-                <CardDescription>Comprehensive overview of filtered projects, their status, and key metrics.</CardDescription>
+            <CardHeader className="pb-3 pt-4 px-4"> 
+                <CardTitle className="text-lg">Project Performance Details</CardTitle> 
+                <CardDescription className="text-xs">Comprehensive overview of filtered projects, their status, and key metrics.</CardDescription> 
             </CardHeader>
-            <CardContent className="pt-2">
-              <ScrollArea className="h-[600px] w-full">
+            <CardContent className="pt-2 px-2 pb-2"> <ScrollArea className="h-[500px] w-full">
                 <Table>
                   <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
                     <TableRow>
-                      <TableHead className="w-[200px] py-3 whitespace-nowrap">Project Name</TableHead>
-                      <TableHead className="py-3">Status</TableHead>
-                      <TableHead className="py-3">Priority</TableHead>
-                      <TableHead className="text-right py-3 whitespace-nowrap">Completion %</TableHead>
-                      <TableHead className="text-right py-3">Budget</TableHead>
-                      <TableHead className="text-right py-3">Spent</TableHead>
-                      <TableHead className="text-right py-3">Variance</TableHead>
-                      <TableHead className="py-3 whitespace-nowrap">Start Date</TableHead>
-                      <TableHead className="py-3 whitespace-nowrap">End Date</TableHead>
-                      <TableHead className="py-3 whitespace-nowrap">Timeline</TableHead>
-                      <TableHead className="py-3 whitespace-nowrap">Team Lead</TableHead>
-                      <TableHead className="py-3">Portfolio</TableHead>
+                      <TableHead className="w-[180px] py-2.5 px-3 text-xs whitespace-nowrap">Project Name</TableHead> 
+                      <TableHead className="py-2.5 px-3 text-xs">Status</TableHead>
+                      <TableHead className="py-2.5 px-3 text-xs">Priority</TableHead>
+                      <TableHead className="text-right py-2.5 px-3 text-xs whitespace-nowrap">Completion %</TableHead>
+                      <TableHead className="text-right py-2.5 px-3 text-xs">Budget</TableHead>
+                      <TableHead className="text-right py-2.5 px-3 text-xs">Spent</TableHead>
+                      <TableHead className="text-right py-2.5 px-3 text-xs">Variance</TableHead>
+                      <TableHead className="py-2.5 px-3 text-xs whitespace-nowrap">Start Date</TableHead>
+                      <TableHead className="py-2.5 px-3 text-xs whitespace-nowrap">End Date</TableHead>
+                      <TableHead className="py-2.5 px-3 text-xs whitespace-nowrap">Timeline</TableHead>
+                      <TableHead className="py-2.5 px-3 text-xs whitespace-nowrap">Team Lead</TableHead>
+                      <TableHead className="py-2.5 px-3 text-xs">Portfolio</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredProjects.length === 0 && (
-                        <TableRow><TableCell colSpan={12} className="h-24 text-center text-muted-foreground">No projects match the current filters.</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={12} className="h-20 text-center text-muted-foreground text-xs">No projects match the current filters.</TableCell></TableRow> 
                     )}
                     {filteredProjects.map(project => {
                       const metrics = projectMetrics[project.id];
+                      const currentStatusStyles = statusStyles[project.status] || statusStyles['Planning'];
                       const StatusIconElement = statusIcons[project.status];
-                      let daysRemainingDisplay: React.ReactNode = <Loader2 className="h-4 w-4 animate-spin text-muted-foreground"/>;
+                      let daysRemainingDisplay: React.ReactNode = <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground"/>;
                       if (!isLoadingMetrics && metrics) {
                         if (project.status === 'Completed') {
-                          daysRemainingDisplay = <span className="text-green-600 dark:text-green-400 font-medium">Completed</span>;
+                          daysRemainingDisplay = <span className="text-green-600 dark:text-green-400 font-medium text-xs">Completed</span>;
                         } else if (metrics.isOverdue) {
-                          daysRemainingDisplay = <span className="text-red-600 dark:text-red-400 font-medium">{Math.abs(metrics.daysRemaining)} days overdue</span>;
+                          daysRemainingDisplay = <span className="text-red-600 dark:text-red-400 font-medium text-xs">{Math.abs(metrics.daysRemaining)} days overdue</span>;
                         } else {
-                          daysRemainingDisplay = <span className="text-muted-foreground">{metrics.daysRemaining} days left</span>;
+                          daysRemainingDisplay = <span className="text-muted-foreground text-xs">{metrics.daysRemaining} days left</span>;
                         }
                       } else if (!isLoadingMetrics) {
-                        daysRemainingDisplay = <span className="text-muted-foreground">N/A</span>;
+                        daysRemainingDisplay = <span className="text-muted-foreground text-xs">N/A</span>;
                       }
 
                       return (
-                        <TableRow key={project.id} className="hover:bg-muted/30">
-                          <TableCell className="font-medium text-primary py-3 whitespace-nowrap">{project.name}</TableCell>
-                          <TableCell className="py-3">
-                            <Badge className={cn('text-xs px-2.5 py-1', statusColors[project.status])}>
-                              {StatusIconElement && <StatusIconElement className="mr-1.5 h-3 w-3" />}
+                        <TableRow key={project.id} className="hover:bg-muted/30 text-xs"> 
+                          <TableCell className="font-medium text-primary py-2 px-3 whitespace-nowrap">{project.name}</TableCell> 
+                          <TableCell className="py-2 px-3">
+                            <Badge className={cn('text-xs px-2 py-0.5', currentStatusStyles.badge)} variant="outline">
+                              {StatusIconElement && <StatusIconElement className="mr-1 h-3 w-3" />}
                               {project.status}
                             </Badge>
                           </TableCell>
-                           <TableCell className="py-3">
-                            <Badge variant="outline" className={cn("text-xs px-2 py-0.5", priorityColors[project.priority])}>
+                           <TableCell className="py-2 px-3">
+                            <Badge variant="outline" className={cn("text-xs px-1.5 py-0.5", priorityColors[project.priority])}>
                               {project.priority}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right py-3">
+                          <TableCell className="text-right py-2 px-3">
                             <div className="flex items-center justify-end">
-                                <span className="mr-2 text-sm">{project.completionPercentage}%</span>
-                                <Progress value={project.completionPercentage} className="h-2 w-16 sm:w-20" aria-label={`${project.completionPercentage}% complete`} />
+                                <span className="mr-1.5 text-xs">{project.completionPercentage}%</span>
+                                <Progress value={project.completionPercentage} className="h-1.5 w-12 sm:w-16" indicatorClassName={currentStatusStyles.progress} aria-label={`${project.completionPercentage}% complete`} /> 
                             </div>
                           </TableCell>
-                          <TableCell className="text-right py-3">{formatCurrency(project.budget)}</TableCell>
-                          <TableCell className="text-right py-3">{formatCurrency(project.spent)}</TableCell>
-                          <TableCell className={cn("text-right py-3 font-medium", project.budget - project.spent >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
+                          <TableCell className="text-right py-2 px-3">{formatCurrency(project.budget)}</TableCell>
+                          <TableCell className="text-right py-2 px-3">{formatCurrency(project.spent)}</TableCell>
+                          <TableCell className={cn("text-right py-2 px-3 font-medium", project.budget - project.spent >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
                             {formatCurrency(project.budget - project.spent)}
                           </TableCell>
-                          <TableCell className="py-3 text-muted-foreground whitespace-nowrap">{formatDate(project.startDate)}</TableCell>
-                          <TableCell className="py-3 text-muted-foreground whitespace-nowrap">{formatDate(project.endDate)}</TableCell>
-                          <TableCell className="py-3 whitespace-nowrap">
+                          <TableCell className="py-2 px-3 text-muted-foreground whitespace-nowrap">{formatDate(project.startDate)}</TableCell>
+                          <TableCell className="py-2 px-3 text-muted-foreground whitespace-nowrap">{formatDate(project.endDate)}</TableCell>
+                          <TableCell className="py-2 px-3 whitespace-nowrap">
                             {daysRemainingDisplay}
                           </TableCell>
-                          <TableCell className="py-3 text-muted-foreground whitespace-nowrap">{project.teamLead}</TableCell>
-                          <TableCell className="py-3 text-muted-foreground">{project.portfolio}</TableCell>
+                          <TableCell className="py-2 px-3 text-muted-foreground whitespace-nowrap">{project.teamLead}</TableCell>
+                          <TableCell className="py-2 px-3 text-muted-foreground">{project.portfolio}</TableCell>
                         </TableRow>
                       );
                     })}
@@ -945,24 +928,20 @@ export default function ReportsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="portfolio" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {portfolioSummaries.map(summary => (
+        <TabsContent value="portfolio" className="mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"> {portfolioSummaries.map(summary => (
               <Card key={summary.portfolioName} className="shadow-lg flex flex-col">
-                <CardHeader className="pb-3 pt-5">
-                  <CardTitle className="text-xl text-primary">{summary.portfolioName}</CardTitle>
-                  <CardDescription>{summary.totalProjects} project{summary.totalProjects !== 1 ? 's' : ''}</CardDescription>
+                <CardHeader className="pb-2 pt-4 px-4"> <CardTitle className="text-md text-primary">{summary.portfolioName}</CardTitle> <CardDescription className="text-xs">{summary.totalProjects} project{summary.totalProjects !== 1 ? 's' : ''}</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3 flex-grow pt-2 text-sm">
-                  <div>
-                    <p className="font-medium text-muted-foreground mb-1">Avg. Completion</p>
+                <CardContent className="space-y-2.5 flex-grow pt-2 px-4 pb-3 text-xs"> <div>
+                    <p className="font-medium text-muted-foreground mb-0.5">Avg. Completion</p>
                     <div className="flex items-center">
-                      <Progress value={summary.averageCompletion} className="h-2.5 mr-2 flex-1" aria-label={`Average completion ${summary.averageCompletion}%`} />
+                      <Progress value={summary.averageCompletion} className="h-2 mr-2 flex-1" indicatorClassName={statusStyles['On Track'].progress} aria-label={`Average completion ${summary.averageCompletion}%`} /> 
                       <span className="font-semibold text-foreground">{summary.averageCompletion}%</span>
                     </div>
                   </div>
                   <div>
-                    <p className="font-medium text-muted-foreground mb-1">Financials</p>
+                    <p className="font-medium text-muted-foreground mb-0.5">Financials</p>
                     <p className="text-xs text-muted-foreground/80">Budget: {formatCurrency(summary.totalBudget)}</p>
                     <p className="text-xs text-muted-foreground/80">Spent: {formatCurrency(summary.totalSpent)}</p>
                     <p className={cn("text-xs font-semibold", summary.budgetVariance >=0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
@@ -970,13 +949,12 @@ export default function ReportsPage() {
                     </p>
                   </div>
                   <div>
-                    <p className="font-medium text-muted-foreground mb-1.5">Status Breakdown</p>
-                    <div className="space-y-1.5">
-                    {Object.entries(summary.statusCounts).map(([status, count]) =>
+                    <p className="font-medium text-muted-foreground mb-1">Status Breakdown</p>
+                    <div className="space-y-1"> {Object.entries(summary.statusCounts).map(([status, count]) =>
                       count > 0 ? (
                         <div key={status} className="flex justify-between items-center text-xs">
-                           <Badge className={cn('text-xs py-0.5 px-2 font-normal', statusColors[status as ProjectStatus])} variant="default">
-                             {statusIcons[status as ProjectStatus] && React.createElement(statusIcons[status as ProjectStatus], {className: "h-3 w-3 mr-1"})}
+                           <Badge className={cn('text-xs py-0.5 px-1.5 font-normal', (statusStyles[status as ProjectStatus] || statusStyles['Planning']).badge)} variant="outline">
+                             {statusIcons[status as ProjectStatus] && React.createElement(statusIcons[status as ProjectStatus], {className: "h-2.5 w-2.5 mr-1"})} 
                              {status}
                            </Badge>
                           <span className="text-muted-foreground">{count} project{count > 1 ? 's' : ''}</span>
@@ -988,8 +966,7 @@ export default function ReportsPage() {
                    <Button
                     variant="link"
                     size="sm"
-                    className="text-xs h-auto p-0 mt-2"
-                    onClick={() => {setSelectedPortfolioForModal(summary); setIsPortfolioModalOpen(true);}}
+                    className="text-xs h-auto p-0 mt-1.5 text-primary hover:text-primary/80"  onClick={() => {setSelectedPortfolioForModal(summary); setIsPortfolioModalOpen(true);}}
                   >
                     View Projects in Portfolio
                   </Button>
@@ -998,68 +975,64 @@ export default function ReportsPage() {
             ))}
              {portfolioSummaries.length === 0 && (
                 <Card className="md:col-span-2 lg:col-span-3 shadow-lg">
-                    <CardContent className="text-center py-16">
-                        <Briefcase className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                        <p className="text-muted-foreground text-lg">No portfolio data available for current filters.</p>
-                    </CardContent>
+                    <CardContent className="text-center py-12"> <Briefcase className="mx-auto h-10 w-10 text-muted-foreground mb-3" />  No portfolio data available for current filters.</CardContent>
                 </Card>
             )}
           </div>
         </TabsContent>
 
-        <TabsContent value="resources" className="mt-6">
+        <TabsContent value="resources" className="mt-4">
           <Card className="shadow-lg">
-            <CardHeader className="pb-4">
-                <CardTitle className="text-2xl">Team Overview & Workload</CardTitle>
-                <CardDescription>Breakdown of projects managed by each team lead, based on current filters.</CardDescription>
+            <CardHeader className="pb-3 pt-4 px-4">
+                <CardTitle className="text-lg">Team Overview &amp; Workload</CardTitle>
+                <CardDescription className="text-xs">Breakdown of projects managed by each team lead, based on current filters.</CardDescription>
             </CardHeader>
-            <CardContent className="pt-2">
-              <ScrollArea className="h-[600px] w-full">
+            <CardContent className="pt-2 px-2 pb-2">
+              <ScrollArea className="h-[500px] w-full">
                 <Table>
                   <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
                     <TableRow>
-                      <TableHead className="w-[180px] py-3 whitespace-nowrap">Team Lead</TableHead>
-                      <TableHead className="text-center py-3 whitespace-nowrap">Total Projects</TableHead>
-                      <TableHead className="text-center py-3 whitespace-nowrap">Active</TableHead>
-                      <TableHead className="text-center py-3 whitespace-nowrap">Completed</TableHead>
-                      <TableHead className="text-right py-3 whitespace-nowrap">Avg. Active Comp. %</TableHead>
-                      <TableHead className="text-right py-3 whitespace-nowrap">Total Budget ($)</TableHead>
-                      <TableHead className="py-3">Active Project Statuses</TableHead>
+                      <TableHead className="w-[150px] py-2.5 px-3 text-xs whitespace-nowrap">Team Lead</TableHead>
+                      <TableHead className="text-center py-2.5 px-3 text-xs whitespace-nowrap">Total Projects</TableHead>
+                      <TableHead className="text-center py-2.5 px-3 text-xs whitespace-nowrap">Active</TableHead>
+                      <TableHead className="text-center py-2.5 px-3 text-xs whitespace-nowrap">Completed</TableHead>
+                      <TableHead className="text-right py-2.5 px-3 text-xs whitespace-nowrap">Avg. Active Comp. %</TableHead>
+                      <TableHead className="text-right py-2.5 px-3 text-xs whitespace-nowrap">Total Budget ($)</TableHead>
+                      <TableHead className="py-2.5 px-3 text-xs">Active Project Statuses</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {teamLeadWorkloads.length === 0 && (
-                        <TableRow><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No team lead data for current filters.</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={7} className="h-20 text-center text-muted-foreground text-xs">No team lead data for current filters.</TableCell></TableRow>
                     )}
                     {teamLeadWorkloads.map(lead => (
-                      <TableRow key={lead.teamLead} className="hover:bg-muted/30">
-                        <TableCell className="font-medium py-3 whitespace-nowrap">{lead.teamLead}</TableCell>
-                        <TableCell className="text-center py-3">{lead.projectCount}</TableCell>
-                        <TableCell className="text-center py-3">{lead.activeProjectsCount}</TableCell>
-                        <TableCell className="text-center py-3">{lead.completedProjectsCount}</TableCell>
-                        <TableCell className="text-right py-3">
+                      <TableRow key={lead.teamLead} className="hover:bg-muted/30 text-xs">
+                        <TableCell className="font-medium py-2 px-3 whitespace-nowrap">{lead.teamLead}</TableCell>
+                        <TableCell className="text-center py-2 px-3">{lead.projectCount}</TableCell>
+                        <TableCell className="text-center py-2 px-3">{lead.activeProjectsCount}</TableCell>
+                        <TableCell className="text-center py-2 px-3">{lead.completedProjectsCount}</TableCell>
+                        <TableCell className="text-right py-2 px-3">
                             <div className="flex items-center justify-end">
-                                <span className="mr-2 text-sm">{lead.averageCompletionPercentage.toFixed(1)}%</span>
-                                <Progress value={lead.averageCompletionPercentage} className="h-2 w-16 sm:w-20" aria-label={`Average active completion ${lead.averageCompletionPercentage}%`} />
+                                <span className="mr-1.5 text-xs">{lead.averageCompletionPercentage.toFixed(1)}%</span>
+                                <Progress value={lead.averageCompletionPercentage} className="h-1.5 w-12 sm:w-16" indicatorClassName={statusStyles['On Track'].progress} aria-label={`Average active completion ${lead.averageCompletionPercentage}%`} />
                             </div>
                         </TableCell>
-                        <TableCell className="text-right py-3">{formatCurrency(lead.totalBudgetManaged)}</TableCell>
-                        <TableCell className="py-3">
-                          <div className="flex flex-wrap gap-1.5">
-                            {Object.entries(lead.statusDistribution)
+                        <TableCell className="text-right py-2 px-3">{formatCurrency(lead.totalBudgetManaged)}</TableCell>
+                        <TableCell className="py-2 px-3">
+                          <div className="flex flex-wrap gap-1"> {Object.entries(lead.statusDistribution)
                               .filter(([status, count]) => status !== 'Completed' && count > 0)
                               .map(([status, count]) => {
                                 const StatusIconElement = statusIcons[status as ProjectStatus];
+                                const currentStatusStyles = statusStyles[status as ProjectStatus] || statusStyles['Planning'];
                                 return (
                                   <TooltipProvider key={status} delayDuration={100}>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <Badge className={cn('text-xs px-2 py-0.5', statusColors[status as ProjectStatus])}>
-                                          {StatusIconElement && <StatusIconElement className="h-3 w-3 mr-1" />}
+                                        <Badge className={cn('text-xs px-1.5 py-0.5', currentStatusStyles.badge)} variant="outline"> {StatusIconElement && React.createElement(StatusIconElement, {className: "h-2.5 w-2.5 mr-0.5"})} 
                                           {count}
                                         </Badge>
                                       </TooltipTrigger>
-                                      <TooltipContent className="text-xs p-1.5 bg-popover shadow-sm rounded-sm border">
+                                      <TooltipContent className="text-xs p-1 bg-popover shadow-sm rounded-sm border">
                                         {count} {status} project{count > 1 ? 's' : ''}
                                       </TooltipContent>
                                     </Tooltip>
@@ -1078,64 +1051,58 @@ export default function ReportsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="trends" className="mt-6">
+        <TabsContent value="trends" className="mt-4">
             <Card className="shadow-lg">
-                <CardHeader className="pb-4">
+                <CardHeader className="pb-3 pt-4 px-4">
                     <div className="flex items-center justify-between">
                         <div>
-                            <CardTitle className="text-2xl flex items-center">
-                                <Brain className="mr-3 h-7 w-7 text-primary" />
-                                Trends & AI Predictions
+                            <CardTitle className="text-lg flex items-center">
+                                <Brain className="mr-2 h-5 w-5 text-primary" /> Trends &amp; AI Predictions
                             </CardTitle>
-                            <CardDescription>
+                            <CardDescription className="text-xs">
                                 Identify patterns and predict future performance with AI analysis.
                                 Results are based on the currently filtered project data.
                             </CardDescription>
                         </div>
-                        <Button onClick={fetchTrendsAndPredictions} disabled={isLoadingTrendsAndPredictions || filteredProjects.length === 0} size="sm">
-                            {isLoadingTrendsAndPredictions ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Brain className="mr-2 h-4 w-4" />}
+                        <Button onClick={fetchTrendsAndPredictions} disabled={isLoadingTrendsAndPredictions || filteredProjects.length === 0} size="sm" className="h-9 px-3 text-xs">
+                            {isLoadingTrendsAndPredictions ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Brain className="mr-1.5 h-3.5 w-3.5" />}
                             {isLoadingTrendsAndPredictions ? 'Analyzing...' : 'Re-analyze with AI'}
                         </Button>
                     </div>
                 </CardHeader>
-                <CardContent className="pt-2 space-y-6">
-                    {filteredProjects.length === 0 && (
-                         <Alert variant="default" className="border-yellow-500 text-yellow-700 dark:border-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20">
-                            <HelpCircle className="h-5 w-5 !text-yellow-600 dark:!text-yellow-500" />
-                            <ShadcnAlertTitle className="font-semibold">No Data for Analysis</ShadcnAlertTitle>
-                            <AlertDescription>
+                <CardContent className="pt-2 px-4 pb-4 space-y-5"> {filteredProjects.length === 0 && (
+                         <Alert variant="default" className="border-yellow-400 text-yellow-700 dark:border-yellow-500 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-900/20 p-3"> 
+                            <HelpCircle className="h-4 w-4 !text-yellow-600 dark:!text-yellow-400" />
+                            <ShadcnAlertTitle className="font-semibold text-sm">No Data for Analysis</ShadcnAlertTitle>
+                            <AlertDescription className="text-xs">
                                 There are no projects matching the current filters. Please adjust your filters to enable trend analysis and AI predictions.
                             </AlertDescription>
                         </Alert>
                     )}
                     {filteredProjects.length > 0 && (
                         <>
-                        {/* Calculated Trend Indicators */}
                         <Card>
-                            <CardHeader className="pb-2 pt-4">
-                                <CardTitle className="text-lg flex items-center">
-                                    <LineChartIcon className="mr-2 h-5 w-5 text-accent" />
-                                    Calculated Trend Indicators
+                            <CardHeader className="pb-2 pt-3 px-3">
+                                <CardTitle className="text-md flex items-center"> 
+                                    <LineChartIcon className="mr-2 h-4 w-4 text-accent" /> Calculated Trend Indicators
                                 </CardTitle>
                                 <CardDescription className="text-xs">Basic trends based on comparing older vs. newer projects in the current filtered dataset.</CardDescription>
                             </CardHeader>
-                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                                {calculatedTrendIndicators.length === 0 && !isLoadingTrendsAndPredictions && <p className="text-sm text-muted-foreground col-span-full text-center py-4">Not enough distinct project start dates in the filtered set to calculate trends. Try broader filters.</p>}
+                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 px-3 pb-3"> {calculatedTrendIndicators.length === 0 && !isLoadingTrendsAndPredictions && <p className="text-xs text-muted-foreground col-span-full text-center py-3">Not enough distinct project start dates in the filtered set to calculate trends. Try broader filters.</p>}
                                 {calculatedTrendIndicators.map((indicator, idx) => (
                                     <Card key={idx} className="bg-secondary/40 shadow-sm">
-                                        <CardHeader className="p-4 pb-2">
-                                            <CardTitle className="text-base">{indicator.metricName}</CardTitle>
+                                        <CardHeader className="p-3 pb-1.5">  <CardTitle className="text-sm">{indicator.metricName}</CardTitle>
                                         </CardHeader>
-                                        <CardContent className="p-4 pt-0 text-sm">
+                                        <CardContent className="p-3 pt-0 text-xs">
                                             <p>Current: <span className="font-semibold">{indicator.currentValue}</span></p>
                                             <p className={cn(
-                                                indicator.trend === 'Improving' && 'text-green-600 dark:text-green-400',
-                                                indicator.trend === 'Declining' && 'text-red-600 dark:text-red-400',
-                                                indicator.trend === 'Stable' && 'text-muted-foreground'
+                                                indicator.trend === 'Improving' && "text-green-600 dark:text-green-400",
+                                                indicator.trend === 'Declining' && "text-red-600 dark:text-red-400",
+                                                indicator.trend === 'Stable' && "text-muted-foreground"
                                             )}>
                                                 Trend: {indicator.trendDescription}
-                                                {indicator.trend === 'Improving' && <TrendingUp className="inline ml-1 h-4 w-4" />}
-                                                {indicator.trend === 'Declining' && <TrendingDown className="inline ml-1 h-4 w-4" />}
+                                                {indicator.trend === 'Improving' && <TrendingUp className="inline ml-1 h-3.5 w-3.5" />}
+                                                {indicator.trend === 'Declining' && <TrendingDown className="inline ml-1 h-3.5 w-3.5" />}
                                             </p>
                                             {indicator.historicalComparison && <p className="text-xs text-muted-foreground">({indicator.historicalComparison})</p>}
                                         </CardContent>
@@ -1144,57 +1111,54 @@ export default function ReportsPage() {
                             </CardContent>
                         </Card>
                     
-                        {/* AI Predictions Section */}
                         <Card>
-                            <CardHeader className="pb-2 pt-4">
-                                <CardTitle className="text-lg flex items-center">
-                                    <Brain className="mr-2 h-5 w-5 text-accent" />
-                                    AI-Powered Predictions
+                            <CardHeader className="pb-2 pt-3 px-3">
+                                <CardTitle className="text-md flex items-center">
+                                    <Brain className="mr-2 h-4 w-4 text-accent" /> AI-Powered Predictions
                                 </CardTitle>
                                  <CardDescription className="text-xs">Insights generated by AI based on the current filtered data. Confidence: High, Medium, Low.</CardDescription>
                             </CardHeader>
-                            <CardContent className="pt-2">
+                            <CardContent className="pt-2 px-3 pb-3">
                                 {isLoadingTrendsAndPredictions && (
-                                    <div className="flex items-center justify-center py-10">
-                                        <Loader2 className="h-8 w-8 animate-spin text-primary mr-3" />
-                                        <p className="text-muted-foreground">AI is analyzing data and generating predictions...</p>
+                                    <div className="flex items-center justify-center py-8">
+                                        <Loader2 className="h-6 w-6 animate-spin text-primary mr-2.5" />
+                                        <p className="text-muted-foreground text-sm">AI is analyzing data and generating predictions...</p>
                                     </div>
                                 )}
                                 {trendsError && !isLoadingTrendsAndPredictions && (
-                                    <Alert variant="destructive">
+                                    <Alert variant="destructive" className="p-3">
                                         <AlertTriangle className="h-4 w-4" />
-                                        <ShadcnAlertTitle>Error Generating Predictions</ShadcnAlertTitle>
-                                        <AlertDescription>{trendsError}</AlertDescription>
+                                        <ShadcnAlertTitle className="text-sm font-semibold">Error Generating Predictions</ShadcnAlertTitle>
+                                        <AlertDescription className="text-xs">{trendsError}</AlertDescription>
                                     </Alert>
                                 )}
                                 {!isLoadingTrendsAndPredictions && !trendsError && trendsAndPredictions && trendsAndPredictions.predictions.length > 0 && (
-                                    <div className="space-y-4">
-                                        {trendsAndPredictions.predictions.map((pred, idx) => (
-                                            <Alert key={idx} variant={pred.confidence === 'High' ? 'default' : pred.confidence === 'Medium' ? 'default' : 'default'} 
+                                    <div className="space-y-3"> {trendsAndPredictions.predictions.map((pred, idx) => (
+                                            <Alert key={idx} variant={'default'} 
                                                 className={cn(
-                                                    "border-l-4",
+                                                    "border-l-4 p-3",
                                                     pred.confidence === 'High' && "border-green-500 bg-green-50 dark:bg-green-900/20",
                                                     pred.confidence === 'Medium' && "border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20",
                                                     pred.confidence === 'Low' && "border-gray-400 bg-gray-50 dark:bg-gray-700/20"
                                                 )}
                                             >
-                                                <div className={cn("flex items-center font-semibold mb-1 text-sm",
+                                                <div className={cn("flex items-center font-semibold mb-0.5 text-xs", 
                                                     pred.confidence === 'High' && "text-green-700 dark:text-green-300",
                                                     pred.confidence === 'Medium' && "text-yellow-700 dark:text-yellow-400",
                                                     pred.confidence === 'Low' && "text-gray-600 dark:text-gray-300"
                                                 )}>
-                                                    {pred.confidence === 'High' && <CheckCircle2 className="h-4 w-4 mr-2" />}
-                                                    {pred.confidence === 'Medium' && <TrendingUp className="h-4 w-4 mr-2" />}
-                                                    {pred.confidence === 'Low' && <HelpCircle className="h-4 w-4 mr-2" />}
+                                                    {pred.confidence === 'High' && <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />}
+                                                    {pred.confidence === 'Medium' && <TrendingUp className="h-3.5 w-3.5 mr-1.5" />}
+                                                    {pred.confidence === 'Low' && <HelpCircle className="h-3.5 w-3.5 mr-1.5" />}
                                                     {pred.area}: <span className="ml-1 font-normal text-foreground">{pred.prediction}</span>
                                                 </div>
-                                                {pred.suggestion && <AlertDescription className="text-xs text-muted-foreground pl-6">Suggestion: {pred.suggestion}</AlertDescription>}
+                                                {pred.suggestion && <AlertDescription className="text-xs text-muted-foreground pl-5">{pred.suggestion}</AlertDescription>} 
                                             </Alert>
                                         ))}
-                                    </div>
+                                    </div >
                                 )}
                                 {!isLoadingTrendsAndPredictions && !trendsError && (!trendsAndPredictions || trendsAndPredictions.predictions.length === 0) && (
-                                    <p className="text-sm text-muted-foreground text-center py-6">No specific AI predictions generated for the current data. The AI might need more distinct data or clearer trends.</p>
+                                    <p className="text-xs text-muted-foreground text-center py-4">No specific AI predictions generated for the current data. The AI might need more distinct data or clearer trends.</p>
                                 )}
                             </CardContent>
                         </Card>
@@ -1206,67 +1170,25 @@ export default function ReportsPage() {
       </Tabs>
 
        <Dialog open={isPortfolioModalOpen} onOpenChange={setIsPortfolioModalOpen}>
-        <DialogContent className="sm:max-w-3xl md:max-w-4xl lg:max-w-5xl max-h-[85vh]">
-          <DialogHeader>
-            <DialogTitle>Projects in: {selectedPortfolioForModal?.portfolioName}</DialogTitle>
-            <DialogDescription>
-              Detailed performance of projects within the &quot;{selectedPortfolioForModal?.portfolioName}&quot; portfolio, reflecting current filters.
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="max-h-[65vh] mt-4 pr-3">
-            {selectedPortfolioForModal && selectedPortfolioForModal.projects.length > 0 ? (
-              <Table>
-                <TableHeader className="sticky top-0 bg-background z-10 shadow-sm"> {/* Use bg-background for modal */}
-                  <TableRow>
-                    <TableHead className="w-[25%]">Project Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead className="text-right">Completion %</TableHead>
-                    <TableHead className="text-right">Budget</TableHead>
-                    <TableHead className="text-right">Spent</TableHead>
-                    <TableHead>Team Lead</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {selectedPortfolioForModal.projects.map(project => {
-                     const StatusIconElement = statusIcons[project.status];
-                     return (
-                        <TableRow key={project.id} className="hover:bg-muted/20">
-                          <TableCell className="font-medium text-primary py-2.5">{project.name}</TableCell>
-                          <TableCell className="py-2.5">
-                            <Badge className={cn('text-xs px-2 py-1', statusColors[project.status])}>
-                              {StatusIconElement && <StatusIconElement className="mr-1 h-3 w-3" />}
-                              {project.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="py-2.5">
-                            <Badge variant="outline" className={cn("text-xs px-1.5 py-0.5", priorityColors[project.priority])}>
-                              {project.priority}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right py-2.5">
-                            <div className="flex items-center justify-end">
-                                <span className="mr-1.5 text-xs">{project.completionPercentage}%</span>
-                                <Progress value={project.completionPercentage} className="h-1.5 w-12 sm:w-16" aria-label={`${project.completionPercentage}% complete`} />
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right text-xs py-2.5">{formatCurrency(project.budget)}</TableCell>
-                          <TableCell className="text-right text-xs py-2.5">{formatCurrency(project.spent)}</TableCell>
-                          <TableCell className="text-xs py-2.5">{project.teamLead}</TableCell>
+        <DialogContent className="sm:max-w-2xl md:max-w-3xl lg:max-w-4xl max-h-[80vh]">
+                          {formatCurrency(project.budget)}</TableCell>
+                          <TableCell className="text-right text-xs py-1.5 px-2.5">{formatCurrency(project.spent)}</TableCell>
+                          <TableCell className="text-xs py-1.5 px-2.5">{project.teamLead}</TableCell>
                         </TableRow>
                      );
                     })}
                 </TableBody>
               </Table>
             ) : (
-              <p className="text-center text-muted-foreground py-10">No projects to display for this portfolio with current filters.</p>
+              <p className="text-center text-muted-foreground py-8 text-sm">No projects to display for this portfolio with current filters.</p> 
             )}
           </ScrollArea>
+           <DialogFooter className="px-4 pt-3 pb-4">
+             <Button variant="outline" size="sm" onClick={() => setIsPortfolioModalOpen(false)} className="h-9 text-xs">Close</Button>
+           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
 
-    

@@ -65,26 +65,26 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-background to-secondary/30 p-4">
-      <Card className="w-full max-w-md shadow-2xl">
+    <div className="flex items-center justify-center min-h-screen bg-secondary/30 p-4">
+      <Card className="w-full max-w-md shadow-xl"> {/* Slightly increased shadow for focus, Asana uses subtle shadows */}
         <CardHeader className="text-center pt-8 pb-6">
-          <div className="mx-auto bg-primary text-primary-foreground rounded-full p-4 w-fit mb-6 shadow-md">
-            <UserCircle className="h-12 w-12" />
+          <div className="mx-auto bg-primary text-primary-foreground rounded-full p-3 w-fit mb-4 shadow-sm"> {/* Reduced padding, smaller shadow */}
+            <UserCircle className="h-10 w-10" /> {/* Slightly smaller icon */}
           </div>
-          <CardTitle className="text-3xl font-bold text-foreground">Welcome Back</CardTitle>
-          <CardDescription className="text-md text-muted-foreground pt-1">Please enter your details to log in.</CardDescription>
+          <CardTitle className="text-2xl font-semibold text-foreground">Welcome Back</CardTitle> {/* Adjusted title size */}
+          <CardDescription className="text-sm text-muted-foreground pt-1">Please enter your details to log in.</CardDescription>
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-6 px-6 pb-6">
+            <CardContent className="space-y-5 px-6 pb-6"> {/* Adjusted spacing */}
               <FormField
                 control={form.control}
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm">Username</FormLabel>
+                    <FormLabel className="text-xs font-medium">Username</FormLabel> {/* Smaller label */}
                     <FormControl>
-                      <Input placeholder="Enter your username" {...field} className="h-11 text-base" />
+                      <Input placeholder="Enter your username" {...field} className="h-10 text-sm" /> {/* Consistent height and text size */}
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -95,16 +95,16 @@ export default function LoginPage() {
                 name="role"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm">Select Role (Demo)</FormLabel>
+                    <FormLabel className="text-xs font-medium">Select Role (Demo)</FormLabel> {/* Smaller label */}
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger className="h-11 text-base">
+                        <SelectTrigger className="h-10 text-sm"> {/* Consistent height and text size */}
                           <SelectValue placeholder="Select a role" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {Object.values(Role).map((roleValue) => (
-                          <SelectItem key={roleValue} value={roleValue} className="text-base py-2.5">
+                          <SelectItem key={roleValue} value={roleValue} className="text-sm py-2"> {/* Consistent text size and padding */}
                             {roleValue}
                           </SelectItem>
                         ))}
@@ -115,9 +115,9 @@ export default function LoginPage() {
                 )}
               />
             </CardContent>
-            <CardFooter className="p-6 pt-2">
-              <Button type="submit" className="w-full h-12 text-base" size="lg">
-                <LogIn className="mr-2 h-5 w-5" /> Login
+            <CardFooter className="p-6 pt-0"> {/* Use CardFooter for actions, ensure consistent padding */}
+              <Button type="submit" className="w-full h-11 text-sm font-semibold" size="lg"> {/* Consistent height, text size, and font weight */}
+                <LogIn className="mr-2 h-4 w-4" /> Login
               </Button>
             </CardFooter>
           </form>
