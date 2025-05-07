@@ -32,6 +32,7 @@ const AssessProjectRiskOutputSchema = z.object({
     z.array(z.string()).describe('Recommended actions to mitigate identified risks.'),
   overallRiskScore: z
     .number()
+    .min(0).max(100) // Added min/max validation
     .describe('An overall risk score for the project, from 0 (low risk) to 100 (high risk).'),
 });
 export type AssessProjectRiskOutput = z.infer<typeof AssessProjectRiskOutputSchema>;
@@ -53,6 +54,7 @@ Team Composition: {{{teamComposition}}}
 Historical Data (if available): {{{historicalData}}}
 
 Based on this information, identify potential risks, suggest mitigation strategies, and provide an overall risk score from 0 to 100. Ensure the identified risks and mitigation recommendations are actionable and specific.
+Provide the output strictly adhering to the defined JSON schema, including an 'overallRiskScore' between 0 and 100.
 `,
 });
 
@@ -63,7 +65,22 @@ const assessProjectRiskFlow = ai.defineFlow(
     outputSchema: AssessProjectRiskOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    const response = await prompt(input);
+    const output = response?.output; // Safely access output
+
+    if (!output) {
+      // Log the issue and throw a specific error
+      console.error('AI risk assessment flow did not return a valid output.', { input });
+      throw new Error('AI failed to generate risk assessment. The response was empty.');
+    }
+
+    // Additional validation to ensure the output matches the schema, especially the score range
+    try {
+      const validatedOutput = AssessProjectRiskOutputSchema.parse(output);
+      return validatedOutput;
+    } catch (validationError) {
+       console.error('AI risk assessment flow returned invalid data:', output, validationError);
+       throw new Error('AI returned an invalid risk assessment format.');
+    }
   }
 );

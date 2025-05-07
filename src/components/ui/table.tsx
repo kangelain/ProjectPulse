@@ -5,15 +5,25 @@ import { cn } from "@/lib/utils"
 const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
->(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto">
-    <table
-      ref={ref}
-      className={cn("w-full caption-bottom text-sm", className)}
-      {...props}
-    />
-  </div>
-))
+>(({ className, children, ...props }, ref) => {
+  // Filter out direct string children (especially whitespace) to prevent hydration errors,
+  // as <table> cannot have text nodes as direct children.
+  const validChildren = React.Children.toArray(children).filter(
+    (child) => React.isValidElement(child)
+  );
+
+  return (
+    <div className="relative w-full overflow-auto">
+      <table
+        ref={ref}
+        className={cn("w-full caption-bottom text-sm", className)}
+        {...props} // Spread other props
+      >
+        {validChildren} {/* Pass only valid React element children */}
+      </table>
+    </div>
+  );
+});
 Table.displayName = "Table"
 
 const TableHeader = React.forwardRef<
