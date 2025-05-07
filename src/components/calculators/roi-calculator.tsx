@@ -13,6 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { PlusCircle, Trash2, Calculator as CalculatorIcon, TrendingUp, Info, AlertTriangle, ReceiptText } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle as ShadcnAlertTitle } from "@/components/ui/alert";
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils'; // Added import
 
 const roiCalculatorSchema = z.object({
   initialInvestment: z.coerce.number().positive({ message: "Initial investment must be a positive number." }),
