@@ -20,7 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DateRangePicker } from '@/components/date-range-picker';
-import { ListChecks, Briefcase, Users, TrendingUp, PieChart, UsersRound, AlertTriangle, Clock, CheckCircle2, Activity, Loader2, FileText, Download, Mail, FileType, Search, Filter as FilterIcon, Check, XCircle, ChevronsUpDown, VenetianMask } from 'lucide-react';
+import { ListChecks, Briefcase, Users, TrendingUp, PieChart, UsersRound, AlertTriangle, Clock, CheckCircle2, Activity, Loader2, FileText, Download, Mail, FileType, Search, Filter as FilterIcon, Check, XCircle, ChevronsUpDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from "@/hooks/use-toast";
 
@@ -28,7 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 const statusColors: Record<ProjectStatus, string> = {
   'On Track': 'bg-green-500 text-white',
   'At Risk': 'bg-red-500 text-white',
-  'Delayed': 'bg-yellow-500 text-black', 
+  'Delayed': 'bg-yellow-500 text-black',
   'Completed': 'bg-blue-500 text-white',
   'Planning': 'bg-gray-500 text-white',
 };
@@ -61,7 +61,7 @@ interface PortfolioSummary {
   totalSpent: number;
   budgetVariance: number;
   statusCounts: Record<ProjectStatus, number>;
-  projects: Project[]; // Added for modal
+  projects: Project[];
 }
 
 interface TeamLeadWorkload {
@@ -101,7 +101,6 @@ export default function ReportsPage() {
   const uniquePortfolios = useMemo(() => Array.from(new Set(mockProjects.map(p => p.portfolio))).sort(), []);
 
   useEffect(() => {
-    // Calculate metrics for all projects once on mount
     if (mockProjects.length === 0) {
       setIsLoadingMetrics(false);
       return;
@@ -128,13 +127,13 @@ export default function ReportsPage() {
         }
 
         metricsData[project.id] = {
-          daysRemaining: daysRemainingCalculated, 
+          daysRemaining: daysRemainingCalculated,
           isOverdue: isOverdueCalculated,
           timelineProgress: timelineProgressCalculated,
         };
       } catch (e) {
         console.error(`Error calculating metrics for project ${project.id}:`, e);
-        metricsData[project.id] = null; 
+        metricsData[project.id] = null;
       }
     });
     setProjectMetrics(metricsData);
@@ -144,7 +143,7 @@ export default function ReportsPage() {
 
   const filteredProjects = useMemo(() => {
     return mockProjects.filter(project => {
-      const matchesSearch = searchTerm === '' || 
+      const matchesSearch = searchTerm === '' ||
         project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         project.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
         project.teamLead.toLowerCase().includes(searchTerm.toLowerCase());
@@ -186,7 +185,7 @@ export default function ReportsPage() {
           totalSpent: 0,
           budgetVariance: 0,
           statusCounts: { 'On Track': 0, 'At Risk': 0, 'Delayed': 0, 'Completed': 0, 'Planning': 0 },
-          projects: [], // Initialize projects array
+          projects: [],
         };
       }
       const summary = portfoliosMap[p.portfolio];
@@ -195,7 +194,7 @@ export default function ReportsPage() {
       summary.totalBudget += p.budget;
       summary.totalSpent += p.spent;
       summary.statusCounts[p.status]++;
-      summary.projects.push(p); // Add project to the list
+      summary.projects.push(p);
     });
 
     return Object.values(portfoliosMap).map(s => ({
@@ -290,14 +289,29 @@ export default function ReportsPage() {
       .replace(/'/g, "&#039;");
   };
 
+  const downloadCSV = (csvString: string, filename: string) => {
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+  };
+
   const handleDownloadPerformanceCSV = () => {
     const headers = [
-      "Project Name", "Status", "Priority", "Completion %", 
-      "Budget (USD)", "Spent (USD)", "Variance (USD)", 
+      "Project Name", "Status", "Priority", "Completion %",
+      "Budget (USD)", "Spent (USD)", "Variance (USD)",
       "Start Date", "End Date", "Days Remaining/Overdue", "Team Lead", "Portfolio"
     ];
 
-    const rows = filteredProjects.map(project => { // Use filteredProjects
+    const rows = filteredProjects.map(project => {
       const metrics = projectMetrics[project.id];
       let daysRemainingDisplay = 'N/A';
       if (metrics) {
@@ -327,20 +341,54 @@ export default function ReportsPage() {
     });
 
     const csvString = [headers.join(','), ...rows].join('\r\n');
-    
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    if (link.download !== undefined) { 
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", "project_performance_report_filtered.csv");
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }
+    downloadCSV(csvString, "project_performance_report_filtered.csv");
   };
+
+  const handleDownloadPortfolioSummariesCSV = () => {
+    const headers = [
+      "Portfolio Name", "Total Projects", "Average Completion (%)", 
+      "Total Budget (USD)", "Total Spent (USD)", "Budget Variance (USD)",
+      "Status On Track", "Status At Risk", "Status Delayed", "Status Completed", "Status Planning"
+    ];
+    const rows = portfolioSummaries.map(summary => [
+      escapeCsvValue(summary.portfolioName),
+      escapeCsvValue(summary.totalProjects),
+      escapeCsvValue(summary.averageCompletion),
+      escapeCsvValue(summary.totalBudget),
+      escapeCsvValue(summary.totalSpent),
+      escapeCsvValue(summary.budgetVariance),
+      escapeCsvValue(summary.statusCounts['On Track']),
+      escapeCsvValue(summary.statusCounts['At Risk']),
+      escapeCsvValue(summary.statusCounts['Delayed']),
+      escapeCsvValue(summary.statusCounts['Completed']),
+      escapeCsvValue(summary.statusCounts['Planning']),
+    ].join(','));
+    const csvString = [headers.join(','), ...rows].join('\r\n');
+    downloadCSV(csvString, "portfolio_summaries_report.csv");
+  };
+
+  const handleDownloadTeamOverviewCSV = () => {
+    const headers = [
+      "Team Lead", "Total Projects (Filtered)", "Active Projects", "Completed Projects",
+      "Avg. Active Completion (%)", "Total Budget Managed (USD)",
+      "Active: On Track", "Active: At Risk", "Active: Delayed", "Active: Planning"
+    ];
+    const rows = teamLeadWorkloads.map(lead => [
+      escapeCsvValue(lead.teamLead),
+      escapeCsvValue(lead.projectCount),
+      escapeCsvValue(lead.activeProjectsCount),
+      escapeCsvValue(lead.completedProjectsCount),
+      escapeCsvValue(lead.averageCompletionPercentage),
+      escapeCsvValue(lead.totalBudgetManaged),
+      escapeCsvValue(lead.statusDistribution['On Track']),
+      escapeCsvValue(lead.statusDistribution['At Risk']),
+      escapeCsvValue(lead.statusDistribution['Delayed']),
+      escapeCsvValue(lead.statusDistribution['Planning']),
+    ].join(','));
+    const csvString = [headers.join(','), ...rows].join('\r\n');
+    downloadCSV(csvString, "team_overview_report.csv");
+  };
+
 
   const generateReportHTML = (tab: string): string => {
     let html = `<html><head><style>
@@ -381,7 +429,7 @@ export default function ReportsPage() {
       html += `<h2>Project Performance Details (${filteredProjects.length} projects)</h2><table>
         <thead><tr><th>Project Name</th><th>Status</th><th>Priority</th><th>Completion %</th><th>Budget</th><th>Spent</th><th>Variance</th><th>Start Date</th><th>End Date</th><th>Days Left/Overdue</th><th>Team Lead</th><th>Portfolio</th></tr></thead>
         <tbody>`;
-      filteredProjects.forEach(project => { // Use filteredProjects
+      filteredProjects.forEach(project => {
         const metrics = projectMetrics[project.id];
         let daysRemainingDisplay = 'N/A';
         if (metrics) {
@@ -407,12 +455,12 @@ export default function ReportsPage() {
       });
       html += `</tbody></table>`;
     } else if (tab === 'portfolio') {
-      html += `<h2>Portfolio Summaries</h2><div class="flex-container">`; // Removed fixed width for card for better wrapping
+      html += `<h2>Portfolio Summaries</h2><div class="flex-container">`;
       portfolioSummaries.forEach(summary => {
         html += `<div class="card">
           <div class="card-title">${escapeHtml(summary.portfolioName)}</div>
           <div class="card-description">${escapeHtml(summary.totalProjects)} projects</div>
-          <p><strong>Avg. Completion:</strong> ${escapeHtml(summary.averageCompletion)}% 
+          <p><strong>Avg. Completion:</strong> ${escapeHtml(summary.averageCompletion)}%
             <div class="progress-bar"><div class="progress-bar-inner" style="width:${summary.averageCompletion}%"></div></div>
           </p>
           <p><strong>Budget:</strong> ${escapeHtml(formatCurrency(summary.totalBudget))}</p>
@@ -459,10 +507,10 @@ export default function ReportsPage() {
 Please find the ${activeTab} report below. This report reflects the currently applied filters.
 
 ${reportHtml}
-    `; // Removed "Note: This report is best viewed in an HTML-compatible email client." for brevity as most are
+    `;
     const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     
-    if (mailtoLink.length > 2000) { 
+    if (mailtoLink.length > 2000) {
       toast({
         title: "Email Content Too Long",
         description: "The generated HTML report is too large to be sent directly via email. Please try downloading as CSV or PDF.",
@@ -476,29 +524,11 @@ ${reportHtml}
 
   const handleDownloadPDF = () => {
     toast({
-      title: "PDF Download In Progress (Simulated)",
-      description: "Generating PDF... This may take a moment. For actual implementation, a library like jsPDF would be used.",
+      title: "PDF Download (Simulated)",
+      description: "Actual PDF generation would require a client or server-side library. This is a placeholder.",
       variant: "default",
       duration: 5000,
     });
-    // Actual PDF generation would involve:
-    // 1. Taking the `generateReportHTML(activeTab)` output.
-    // 2. Using a library like jsPDF and html2canvas (or a server-side PDF generator).
-    // Example placeholder:
-    // const reportHtml = generateReportHTML(activeTab);
-    // import('jspdf').then(jsPDFModule => {
-    //   const jsPDF = jsPDFModule.default;
-    //   const doc = new jsPDF();
-    //   doc.html(reportHtml, {
-    //     callback: function (doc) {
-    //       doc.save(`projectpulse_report_${activeTab}.pdf`);
-    //     },
-    //     x: 10,
-    //     y: 10,
-    //     width: 180, //pixels
-    //     windowWidth: 650 //pixels
-    //   });
-    // }).catch(err => console.error("Failed to load jsPDF", err));
   };
 
   const MultiSelectFilter = ({ title, options, selectedValues, onValueChange }: { title: string, options: readonly string[], selectedValues: Set<string>, onValueChange: (item: string) => void }) => {
@@ -525,7 +555,6 @@ ${reportHtml}
                     key={option}
                     onSelect={() => {
                       onValueChange(option);
-                      // setOpen(false); // Keep open for multi-select
                     }}
                     className="text-sm"
                   >
@@ -571,13 +600,15 @@ ${reportHtml}
           </div>
         </div>
          <div className="flex gap-2 flex-wrap sm:flex-nowrap">
-            <Button onClick={() => { /* Export CSV will be tab specific */ 
+            <Button onClick={() => {
                 if (activeTab === 'performance') handleDownloadPerformanceCSV();
-                else toast({ title: "CSV Export", description: `CSV export is specific to Project Performance tab.`, variant: "default" });
+                else if (activeTab === 'portfolio') handleDownloadPortfolioSummariesCSV();
+                else if (activeTab === 'resources') handleDownloadTeamOverviewCSV();
+                else toast({ title: "CSV Export", description: `CSV export is not available for this tab.`, variant: "default" });
             }} size="sm" variant="outline" title="Download current view as CSV">
                 <Download className="mr-2 h-4 w-4" /> CSV
             </Button>
-            <Button onClick={handleDownloadPDF} size="sm" variant="outline" title="Download current view as PDF">
+            <Button onClick={handleDownloadPDF} size="sm" variant="outline" title="Download current view as PDF (Simulated)">
                 <FileType className="mr-2 h-4 w-4" /> PDF
             </Button>
             <Button onClick={handleShareViaEmail} size="sm" variant="outline" title="Share current view via Email">
@@ -586,7 +617,6 @@ ${reportHtml}
         </div>
       </div>
       
-      {/* Filter Bar */}
       <Card className="mb-8 shadow-md">
         <CardHeader className="pb-3 pt-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -658,7 +688,7 @@ ${reportHtml}
                     {filteredProjects.map(project => {
                       const metrics = projectMetrics[project.id];
                       const StatusIconElement = statusIcons[project.status];
-                      let daysRemainingDisplay = <Loader2 className="h-4 w-4 animate-spin text-muted-foreground"/>;
+                      let daysRemainingDisplay: React.ReactNode = <Loader2 className="h-4 w-4 animate-spin text-muted-foreground"/>;
                       if (!isLoadingMetrics && metrics) {
                         if (project.status === 'Completed') {
                           daysRemainingDisplay = <span className="text-green-600 dark:text-green-400 font-medium">Completed</span>;
@@ -753,10 +783,10 @@ ${reportHtml}
                     )}
                     </div>
                   </div>
-                   <Button 
-                    variant="link" 
-                    size="sm" 
-                    className="text-xs h-auto p-0 mt-2" 
+                   <Button
+                    variant="link"
+                    size="sm"
+                    className="text-xs h-auto p-0 mt-2"
                     onClick={() => {setSelectedPortfolioForModal(summary); setIsPortfolioModalOpen(true);}}
                   >
                     View Projects in Portfolio
@@ -847,43 +877,61 @@ ${reportHtml}
         </TabsContent>
       </Tabs>
 
-      {/* Portfolio Projects Modal */}
        <Dialog open={isPortfolioModalOpen} onOpenChange={setIsPortfolioModalOpen}>
-        <DialogContent className="sm:max-w-2xl md:max-w-3xl max-h-[80vh]">
+        <DialogContent className="sm:max-w-3xl md:max-w-4xl lg:max-w-5xl max-h-[85vh]">
           <DialogHeader>
             <DialogTitle>Projects in: {selectedPortfolioForModal?.portfolioName}</DialogTitle>
             <DialogDescription>
-              List of projects within the selected portfolio based on current filters.
+              Detailed performance of projects within the &quot;{selectedPortfolioForModal?.portfolioName}&quot; portfolio, reflecting current filters.
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[60vh] mt-4 pr-2">
+          <ScrollArea className="max-h-[65vh] mt-4 pr-3">
             {selectedPortfolioForModal && selectedPortfolioForModal.projects.length > 0 ? (
               <Table>
-                <TableHeader>
+                <TableHeader className="sticky top-0 bg-dialog-content z-10 shadow-sm">
                   <TableRow>
-                    <TableHead>Project Name</TableHead>
+                    <TableHead className="w-[25%]">Project Name</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Completion %</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead className="text-right">Completion %</TableHead>
+                    <TableHead className="text-right">Budget</TableHead>
+                    <TableHead className="text-right">Spent</TableHead>
                     <TableHead>Team Lead</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {selectedPortfolioForModal.projects.map(project => (
-                    <TableRow key={project.id}>
-                      <TableCell className="font-medium text-primary">{project.name}</TableCell>
-                      <TableCell>
-                        <Badge className={cn('text-xs', statusColors[project.status])}>
-                          {project.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{project.completionPercentage}%</TableCell>
-                      <TableCell>{project.teamLead}</TableCell>
-                    </TableRow>
-                  ))}
+                  {selectedPortfolioForModal.projects.map(project => {
+                     const StatusIconElement = statusIcons[project.status];
+                     return (
+                        <TableRow key={project.id} className="hover:bg-muted/20">
+                          <TableCell className="font-medium text-primary py-2.5">{project.name}</TableCell>
+                          <TableCell className="py-2.5">
+                            <Badge className={cn('text-xs px-2 py-1', statusColors[project.status])}>
+                              {StatusIconElement && <StatusIconElement className="mr-1 h-3 w-3" />}
+                              {project.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="py-2.5">
+                            <Badge variant="outline" className={cn("text-xs px-1.5 py-0.5", priorityColors[project.priority])}>
+                              {project.priority}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right py-2.5">
+                            <div className="flex items-center justify-end">
+                                <span className="mr-1.5 text-xs">{project.completionPercentage}%</span>
+                                <Progress value={project.completionPercentage} className="h-1.5 w-12 sm:w-16" aria-label={`${project.completionPercentage}% complete`} />
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right text-xs py-2.5">{formatCurrency(project.budget)}</TableCell>
+                          <TableCell className="text-right text-xs py-2.5">{formatCurrency(project.spent)}</TableCell>
+                          <TableCell className="text-xs py-2.5">{project.teamLead}</TableCell>
+                        </TableRow>
+                     );
+                    })}
                 </TableBody>
               </Table>
             ) : (
-              <p className="text-center text-muted-foreground py-8">No projects to display for this portfolio with current filters.</p>
+              <p className="text-center text-muted-foreground py-10">No projects to display for this portfolio with current filters.</p>
             )}
           </ScrollArea>
         </DialogContent>
@@ -892,3 +940,5 @@ ${reportHtml}
     </div>
   );
 }
+
+    
