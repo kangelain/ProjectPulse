@@ -1,6 +1,7 @@
 
 'use client';
 
+import * as React from 'react'; // Added React import
 import { useState, useEffect, useMemo } from 'react';
 import { mockProjects } from '@/lib/mock-data';
 import type { Project, ProjectStatus } from '@/types/project';
