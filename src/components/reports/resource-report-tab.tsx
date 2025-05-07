@@ -1,5 +1,7 @@
+
 'use client';
 
+import * as React from 'react'; // Added React import
 import type { ProjectStatus } from '@/types/project';
 import type { TeamLeadWorkload } from '@/types/project-reports';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
