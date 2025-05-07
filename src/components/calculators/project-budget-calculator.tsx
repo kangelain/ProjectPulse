@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // Added useEffect
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Trash2, Calculator, ReceiptText, Percent } from 'lucide-react';
+import { PlusCircle, Trash2, Calculator, ReceiptText, Percent, DollarSign } from 'lucide-react'; // Added DollarSign
 import { cn } from '@/lib/utils';
 
 const budgetItemSchema = z.object({
@@ -66,7 +66,7 @@ export function ProjectBudgetCalculator() {
   const watchedItems = form.watch("budgetItems");
   const watchedContingency = form.watch("contingencyPercentage");
 
-  useState(() => {
+  useEffect(() => { // Changed from useState to useEffect
     if (form.formState.isSubmitted || (watchedItems && watchedContingency !== undefined)) {
        calculateBudget(form.getValues());
     }
