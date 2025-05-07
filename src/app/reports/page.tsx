@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -18,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { DateRangePicker } from '@/components/date-range-picker';
 import { ListChecks, Briefcase, Users, TrendingUp, PieChart, UsersRound, AlertTriangle, Clock, CheckCircle2, Activity, Loader2, Download, Mail, FileType, Search, Filter as FilterIcon, Check, XCircle, ChevronsUpDown, Brain, HelpCircle, LineChart as LineChartIcon, TrendingDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -339,7 +338,11 @@ export default function ReportsPage() {
   }, [activeTab, filteredProjects]); 
 
   
-  const handleFilterToggle = <T,>(set: Set<T>, item: T, setter: React.Dispatch<React.SetStateAction<Set<T>>>>) => {
+  function handleFilterToggle<T>(
+    set: Set<T>,
+    item: T,
+    setter: React.Dispatch<React.SetStateAction<Set<T>>>
+  ) {
     const newSet = new Set(set);
     if (newSet.has(item)) {
       newSet.delete(item);
@@ -347,7 +350,7 @@ export default function ReportsPage() {
       newSet.add(item);
     }
     setter(newSet);
-  };
+  }
   
   const resetFilters = () => {
     setSearchTerm('');
@@ -1171,6 +1174,46 @@ export default function ReportsPage() {
 
        <Dialog open={isPortfolioModalOpen} onOpenChange={setIsPortfolioModalOpen}>
         <DialogContent className="sm:max-w-2xl md:max-w-3xl lg:max-w-4xl max-h-[80vh]">
+          <DialogHeader className="px-4 pt-4 pb-3">
+            <DialogTitle className="text-xl">Projects in: {selectedPortfolioForModal?.portfolioName}</DialogTitle>
+            <DialogDescription className="text-xs">
+              Detailed list of projects within this portfolio, reflecting current global filters.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-[60vh] px-4">
+            {selectedPortfolioForModal && selectedPortfolioForModal.projects.length > 0 ? (
+              <Table>
+                <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
+                  <TableRow>
+                    <TableHead className="py-2 px-2.5 text-xs">Project Name</TableHead>
+                    <TableHead className="py-2 px-2.5 text-xs">Status</TableHead>
+                    <TableHead className="py-2 px-2.5 text-xs">Priority</TableHead>
+                    <TableHead className="text-right py-2 px-2.5 text-xs">Comp. %</TableHead>
+                    <TableHead className="text-right py-2 px-2.5 text-xs">Budget</TableHead>
+                    <TableHead className="text-right py-2 px-2.5 text-xs">Spent</TableHead>
+                    <TableHead className="py-2 px-2.5 text-xs">Team Lead</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selectedPortfolioForModal.projects.map(project => {
+                     const currentStatusStyles = statusStyles[project.status] || statusStyles['Planning'];
+                     const StatusIconElement = statusIcons[project.status];
+                     return (
+                        <TableRow key={project.id} className="hover:bg-muted/30 text-xs">
+                          <TableCell className="font-medium text-primary py-1.5 px-2.5">{project.name}</TableCell>
+                          <TableCell className="py-1.5 px-2.5">
+                             <Badge className={cn('text-xs px-1.5 py-0.5', currentStatusStyles.badge)} variant="outline">
+                               {StatusIconElement && <StatusIconElement className="mr-1 h-2.5 w-2.5" />}
+                               {project.status}
+                             </Badge>
+                          </TableCell>
+                          <TableCell className="py-1.5 px-2.5">
+                            <Badge variant="outline" className={cn("text-xs px-1 py-0", priorityColors[project.priority])}>
+                              {project.priority}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right py-1.5 px-2.5">{project.completionPercentage}%</TableCell>
+                          <TableCell className="text-right text-xs py-1.5 px-2.5">
                           {formatCurrency(project.budget)}</TableCell>
                           <TableCell className="text-right text-xs py-1.5 px-2.5">{formatCurrency(project.spent)}</TableCell>
                           <TableCell className="text-xs py-1.5 px-2.5">{project.teamLead}</TableCell>
@@ -1191,4 +1234,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
 

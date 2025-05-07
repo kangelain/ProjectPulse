@@ -43,7 +43,7 @@ const formatDateSafe = (dateString: string | undefined) => {
   }
 };
 
-export default function RiskAssessmentPage() {
+const RiskAssessmentPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [assessmentResult, setAssessmentResult] = useState<AssessProjectRiskOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -414,4 +414,6 @@ Priority: ${project.priority}.`;
       )}
     </div>
   );
-}
+};
+
+export default RiskAssessmentPage;
