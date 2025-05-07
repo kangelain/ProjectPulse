@@ -5,10 +5,11 @@ import { useState } from 'react';
 import { ProjectStatusCard } from '@/components/project-status-card';
 import { ProjectProgressChart } from '@/components/project-progress-chart';
 import { ProjectTimelineGantt } from '@/components/project-timeline-gantt';
+import { ProjectBudgetChart } from '@/components/project-budget-chart'; // Added import
 import { mockProjects } from '@/lib/mock-data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { List, BarChart3, GanttChartSquare, Briefcase } from 'lucide-react';
+import { List, BarChart3, GanttChartSquare, Briefcase, PieChart } from 'lucide-react'; // Added PieChart icon
 
 export default function HomePage() {
   const [selectedPortfolio, setSelectedPortfolio] = useState<string>('all');
@@ -51,7 +52,7 @@ export default function HomePage() {
       </div>
 
       <Tabs defaultValue="cards" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 mb-6">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6"> {/* Updated grid layout */}
           <TabsTrigger value="cards" className="text-sm">
             <List className="mr-2 h-4 w-4" /> Status Cards
           </TabsTrigger>
@@ -60,6 +61,9 @@ export default function HomePage() {
           </TabsTrigger>
           <TabsTrigger value="timeline" className="text-sm">
             <GanttChartSquare className="mr-2 h-4 w-4" /> Gantt Timelines
+          </TabsTrigger>
+          <TabsTrigger value="budget" className="text-sm"> {/* New Tab Trigger */}
+            <PieChart className="mr-2 h-4 w-4" /> Budget Charts
           </TabsTrigger>
         </TabsList>
 
@@ -84,6 +88,12 @@ export default function HomePage() {
         <TabsContent value="timeline">
           <div className="grid grid-cols-1 gap-6">
              <ProjectTimelineGantt projects={filteredProjects} />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="budget"> {/* New Tab Content */}
+          <div className="grid grid-cols-1 gap-6">
+             <ProjectBudgetChart projects={filteredProjects} />
           </div>
         </TabsContent>
       </Tabs>
