@@ -35,6 +35,7 @@ import {
   ArrowRight,
   UserCheck,
   FileType,
+  Banknote, // Added Banknote icon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parseISO, differenceInDays } from 'date-fns';
@@ -124,7 +125,11 @@ export default function ProjectDetailPage() {
           timelineProgressCalculated = 100;
       } else if (totalProjectDuration > 0) {
            timelineProgressCalculated = Math.min(100, Math.max(0, (daysPassed / totalProjectDuration) * 100));
+      } else {
+        // Handle cases where start and end date might be the same or invalid
+        timelineProgressCalculated = project.completionPercentage; // Fallback to task completion
       }
+
 
       setClientCalculatedMetrics({
         daysRemaining: daysRemainingCalculated,
@@ -375,6 +380,65 @@ export default function ProjectDetailPage() {
         </Card>
       )}
 
+      <Card className="mb-8 shadow-lg">
+        <CardHeader className="pb-4">
+            <div className="flex items-center">
+              <Banknote className="h-7 w-7 mr-3 text-primary" />
+              <CardTitle className="text-2xl">Financial Health</CardTitle>
+            </div>
+            <CardDescription>Overview of the project&apos;s budget and expenditure.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 bg-secondary/40 rounded-lg shadow-sm text-center md:text-left">
+                <p className="text-sm text-muted-foreground">Total Budget</p>
+                <p className="text-2xl font-semibold text-foreground">${project.budget.toLocaleString()}</p>
+              </div>
+              <div className="p-4 bg-secondary/40 rounded-lg shadow-sm text-center md:text-left">
+                <p className="text-sm text-muted-foreground">Amount Spent</p>
+                <p className="text-2xl font-semibold text-foreground">${project.spent.toLocaleString()}</p>
+              </div>
+              <div className={cn(
+                  "p-4 rounded-lg shadow-sm text-center md:text-left",
+                  project.budget - project.spent < 0 ? 'bg-red-100 dark:bg-red-900/30' : 'bg-green-100 dark:bg-green-900/30'
+                )}>
+                <p className={cn(
+                    "text-sm",
+                    project.budget - project.spent < 0 ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'
+                  )}>
+                  {project.budget - project.spent >= 0 ? 'Remaining Budget' : 'Budget Deficit'}
+                </p>
+                <p className={cn(
+                    "text-2xl font-semibold",
+                     project.budget - project.spent < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
+                  )}>
+                  ${Math.abs(project.budget - project.spent).toLocaleString()}
+                </p>
+              </div>
+            </div>
+            <div>
+              <div className="mb-1.5 flex justify-between text-sm text-muted-foreground">
+                <span>Budget Utilization</span>
+                <span className="font-medium text-foreground">
+                  {project.budget > 0 ? ((project.spent / project.budget) * 100).toFixed(1) : 0}%
+                </span>
+              </div>
+              <Progress 
+                value={project.budget > 0 ? (project.spent / project.budget) * 100 : 0} 
+                className="h-3"
+                indicatorClassName={project.spent > project.budget ? 'bg-destructive' : ((project.spent / project.budget) * 100) > 85 ? 'bg-yellow-500' : 'bg-primary'}
+                aria-label="Budget utilization"
+              />
+              {project.spent > project.budget && project.budget > 0 && (
+                <p className="text-xs text-destructive mt-1.5">
+                  Over budget by {(((project.spent - project.budget) / project.budget) * 100).toFixed(1)}%
+                  (${(project.spent - project.budget).toLocaleString()})
+                </p>
+              )}
+            </div>
+          </CardContent>
+      </Card>
+
 
       <Card className="mb-8 shadow-lg">
         <CardHeader className="pb-4">
@@ -523,3 +587,4 @@ const DownloadCloud = (props: React.SVGProps<SVGSVGElement>) => (
     <path d="m8 17 4 4 4-4" />
   </svg>
 );
+
