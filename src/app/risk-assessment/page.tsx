@@ -19,6 +19,7 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { mockProjects, type Project } from '@/lib/mock-data';
 import { format, parseISO } from 'date-fns';
+import { cn } from '@/lib/utils'; // Added import for cn
 
 const MANUAL_ENTRY_VALUE = "__manual_entry__";
 
@@ -51,7 +52,7 @@ export default function RiskAssessmentPage() {
   const form = useForm<RiskAssessmentFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      selectedProjectId: '', // Initial state, placeholder will show
+      selectedProjectId: MANUAL_ENTRY_VALUE, // Default to manual entry
       projectDescription: '',
       projectTimeline: '',
       projectBudget: '',
@@ -64,13 +65,14 @@ export default function RiskAssessmentPage() {
 
   const populateFormWithProjectData = useCallback((projectId: string | undefined) => {
     if (!projectId || projectId === MANUAL_ENTRY_VALUE) {
+      const currentManualValues = form.getValues();
       form.reset({
-        selectedProjectId: projectId === MANUAL_ENTRY_VALUE ? MANUAL_ENTRY_VALUE : '',
-        projectDescription: '',
-        projectTimeline: '',
-        projectBudget: '',
-        teamComposition: '',
-        historicalData: form.getValues('historicalData') || '', 
+        selectedProjectId: MANUAL_ENTRY_VALUE,
+        projectDescription: projectId === MANUAL_ENTRY_VALUE ? '' : currentManualValues.projectDescription,
+        projectTimeline: projectId === MANUAL_ENTRY_VALUE ? '' : currentManualValues.projectTimeline,
+        projectBudget: projectId === MANUAL_ENTRY_VALUE ? '' : currentManualValues.projectBudget,
+        teamComposition: projectId === MANUAL_ENTRY_VALUE ? '' : currentManualValues.teamComposition,
+        historicalData: currentManualValues.historicalData || '', 
       });
       return;
     }
@@ -105,8 +107,29 @@ Priority: ${project.priority}.`;
   }, [form]); 
 
   useEffect(() => {
-    populateFormWithProjectData(selectedProjectId);
-  }, [selectedProjectId, populateFormWithProjectData]);
+    // Only auto-populate if not manual entry, or if switching away from manual
+    if (selectedProjectId !== MANUAL_ENTRY_VALUE) {
+        populateFormWithProjectData(selectedProjectId);
+    } else {
+        // If explicitly set to manual, clear fields if they were previously populated from a project
+        // but preserve any existing manual historicalData
+        const currentValues = form.getValues();
+        if (currentValues.projectDescription && currentValues.projectTimeline && currentValues.projectBudget && currentValues.teamComposition &&
+            !mockProjects.find(p => p.description === currentValues.projectDescription) // Heuristic: check if it was from a project
+        ) {
+          // Don't clear if it already looks like manual entry
+        } else if (currentValues.selectedProjectId !== MANUAL_ENTRY_VALUE) { // If it was a project before, then clear
+          form.reset({
+            selectedProjectId: MANUAL_ENTRY_VALUE,
+            projectDescription: '',
+            projectTimeline: '',
+            projectBudget: '',
+            teamComposition: '',
+            historicalData: currentValues.historicalData || '',
+          });
+        }
+    }
+  }, [selectedProjectId, populateFormWithProjectData, form]);
 
 
   async function onSubmit(values: RiskAssessmentFormValues) {
@@ -177,9 +200,9 @@ Priority: ${project.priority}.`;
                     <FormLabel className="flex items-center gap-2"><Briefcase className="h-4 w-4 text-muted-foreground" />Select Project (Optional)</FormLabel>
                     <Select 
                         onValueChange={(value) => {
-                            field.onChange(value === MANUAL_ENTRY_VALUE ? MANUAL_ENTRY_VALUE : value);
+                            field.onChange(value);
                          }} 
-                        value={field.value === MANUAL_ENTRY_VALUE ? MANUAL_ENTRY_VALUE : field.value || ''} // Ensure value is not undefined for Select
+                        value={field.value || MANUAL_ENTRY_VALUE} 
                         disabled={isLoading}
                     >
                       <FormControl>
