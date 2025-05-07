@@ -1,3 +1,4 @@
+
 import type { Project } from '@/types/project';
 
 export const mockProjects: Project[] = [
@@ -121,3 +122,15 @@ export const mockProjects: Project[] = [
     portfolio: 'Customer Experience',
   }
 ];
+
+
+export function updateMockProject(updatedProject: Project): void {
+  const projectIndex = mockProjects.findIndex(p => p.id === updatedProject.id);
+  if (projectIndex !== -1) {
+    mockProjects[projectIndex] = { ...updatedProject };
+  } else {
+    // Optionally handle case where project to update is not found
+    console.warn(`Project with id ${updatedProject.id} not found for update.`);
+    // mockProjects.push(updatedProject); // Or add if not found, depending on desired behavior
+  }
+}

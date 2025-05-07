@@ -2,12 +2,13 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { mockProjects } from '@/lib/mock-data';
+import { mockProjects, updateMockProject } from '@/lib/mock-data';
 import type { Project, KeyMilestone, ProjectStatus } from '@/types/project';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import {
   CalendarDays,
@@ -31,7 +32,9 @@ import { cn } from '@/lib/utils';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { ProjectTimelineGantt } from '@/components/project-timeline-gantt';
 import { ProjectBudgetChart } from '@/components/project-budget-chart';
-import { useState, useEffect } from 'react';
+import { ProjectEditForm } from '@/components/project-edit-form';
+import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect, useCallback } from 'react';
 
 const statusIcons: Record<ProjectStatus, React.ElementType> = {
   'On Track': TrendingUp,
@@ -78,9 +81,17 @@ export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
   const projectId = params.id as string;
+  const { toast } = useToast();
 
-  const project = mockProjects.find((p) => p.id === projectId);
+  const [project, setProject] = useState<Project | undefined>(() => mockProjects.find((p) => p.id === projectId));
   const [clientCalculatedMetrics, setClientCalculatedMetrics] = useState<ClientCalculatedMetrics | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  useEffect(() => {
+    const foundProject = mockProjects.find((p) => p.id === projectId);
+    setProject(foundProject);
+  }, [projectId]);
+  
 
   useEffect(() => {
     if (project) {
@@ -97,8 +108,22 @@ export default function ProjectDetailPage() {
         daysRemaining: daysRemainingCalculated,
         timelineProgress: timelineProgressCalculated,
       });
+    } else {
+      setClientCalculatedMetrics(null);
     }
   }, [project]);
+
+
+  const handleProjectSave = useCallback((updatedProjectData: Project) => {
+    updateMockProject(updatedProjectData);
+    setProject(updatedProjectData); // Update local state to re-render the page
+    setIsEditDialogOpen(false);
+    toast({
+      title: "Project Updated",
+      description: `${updatedProjectData.name} has been successfully updated.`,
+      variant: "default",
+    });
+  }, [toast]);
 
 
   if (!project) {
@@ -131,12 +156,26 @@ export default function ProjectDetailPage() {
           <ChevronLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
-        <div className="flex items-center space-x-2">
-             {/* Placeholder for future edit/actions */}
-            {/* <Button variant="outline" size="sm">
-                <Edit3 className="mr-2 h-4 w-4" /> Edit Project
-            </Button> */}
-        </div>
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Edit3 className="mr-2 h-4 w-4" /> Edit Project
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Project: {project.name}</DialogTitle>
+              <DialogDescription>
+                Make changes to the project details below. Click save when you're done.
+              </DialogDescription>
+            </DialogHeader>
+            <ProjectEditForm
+              project={project}
+              onSubmit={handleProjectSave}
+              onCancel={() => setIsEditDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card className="mb-8 shadow-xl">
@@ -219,6 +258,13 @@ export default function ProjectDetailPage() {
                 </Badge>
               </div>
             </div>
+             <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-md col-span-1 md:col-span-2 lg:col-span-1"> {/* Adjust span for layout */}
+              <ListChecks className="h-5 w-5 text-accent flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium">Overall Status</p>
+                <p className="text-muted-foreground">{project.status}</p>
+              </div>
+            </div>
           </div>
         </CardContent>
         <CardFooter className="text-xs text-muted-foreground pt-4 border-t">
@@ -291,17 +337,7 @@ export default function ProjectDetailPage() {
             </CardContent>
         </Card>
       </div>
-
-
-      {/* Placeholder for future sections like Related Documents, Team Members, Risk Log etc. */}
-      {/* <Card className="shadow-xl">
-        <CardHeader>
-          <CardTitle>Additional Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">More details will be available here in future updates.</p>
-        </CardContent>
-      </Card> */}
     </div>
   );
 }
+
