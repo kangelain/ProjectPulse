@@ -20,6 +20,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { mockProjects, type Project } from '@/lib/mock-data';
 import { format, parseISO } from 'date-fns';
 
+const MANUAL_ENTRY_VALUE = "__manual_entry__";
+
 const formSchema = z.object({
   selectedProjectId: z.string().optional(),
   projectDescription: z.string().min(50, { message: 'Project description must be at least 50 characters.' }),
@@ -49,7 +51,7 @@ export default function RiskAssessmentPage() {
   const form = useForm<RiskAssessmentFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      selectedProjectId: '',
+      selectedProjectId: '', // Initial state, placeholder will show
       projectDescription: '',
       projectTimeline: '',
       projectBudget: '',
@@ -61,14 +63,14 @@ export default function RiskAssessmentPage() {
   const selectedProjectId = form.watch('selectedProjectId');
 
   const populateFormWithProjectData = useCallback((projectId: string | undefined) => {
-    if (!projectId) {
-      form.reset({ // Reset to empty if no project selected or deselected
-        selectedProjectId: '',
+    if (!projectId || projectId === MANUAL_ENTRY_VALUE) {
+      form.reset({
+        selectedProjectId: projectId === MANUAL_ENTRY_VALUE ? MANUAL_ENTRY_VALUE : '',
         projectDescription: '',
         projectTimeline: '',
         projectBudget: '',
         teamComposition: '',
-        historicalData: form.getValues('historicalData') || '', // Preserve historical data if user typed it
+        historicalData: form.getValues('historicalData') || '', 
       });
       return;
     }
@@ -96,11 +98,11 @@ Priority: ${project.priority}.`;
         projectTimeline,
         projectBudget,
         teamComposition,
-        historicalData: form.getValues('historicalData') || '', // Preserve historical data
+        historicalData: form.getValues('historicalData') || '',
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form]); // form is stable
+  }, [form]); 
 
   useEffect(() => {
     populateFormWithProjectData(selectedProjectId);
@@ -173,14 +175,20 @@ Priority: ${project.priority}.`;
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2"><Briefcase className="h-4 w-4 text-muted-foreground" />Select Project (Optional)</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+                    <Select 
+                        onValueChange={(value) => {
+                            field.onChange(value === MANUAL_ENTRY_VALUE ? MANUAL_ENTRY_VALUE : value);
+                         }} 
+                        value={field.value === MANUAL_ENTRY_VALUE ? MANUAL_ENTRY_VALUE : field.value || ''} // Ensure value is not undefined for Select
+                        disabled={isLoading}
+                    >
                       <FormControl>
                         <SelectTrigger className="h-10">
                           <SelectValue placeholder="Select a project to pre-fill details" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">-- Enter Manually --</SelectItem>
+                        <SelectItem value={MANUAL_ENTRY_VALUE}>-- Enter Manually --</SelectItem>
                         {mockProjects.sort((a,b) => a.name.localeCompare(b.name)).map(project => (
                           <SelectItem key={project.id} value={project.id}>
                             {project.name}
@@ -321,7 +329,7 @@ Priority: ${project.priority}.`;
               <CheckCircle2 className="h-7 w-7 mr-3 text-green-500" />
               Risk Assessment Results
             </CardTitle>
-            {selectedProjectId && mockProjects.find(p => p.id === selectedProjectId) && (
+            {selectedProjectId && selectedProjectId !== MANUAL_ENTRY_VALUE && mockProjects.find(p => p.id === selectedProjectId) && (
               <CardDescription>
                 Assessment for project: <span className="font-semibold">{mockProjects.find(p => p.id === selectedProjectId)?.name}</span>
               </CardDescription>
