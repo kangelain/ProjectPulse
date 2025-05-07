@@ -88,14 +88,14 @@ export default function ProjectDetailPage() {
       const endDate = parseISO(project.endDate);
       const startDate = parseISO(project.startDate);
 
-      const daysRemaining = differenceInDays(endDate, now);
+      const daysRemainingCalculated = differenceInDays(endDate, now);
       const totalProjectDuration = differenceInDays(endDate, startDate);
       const daysPassed = Math.max(0, differenceInDays(now, startDate));
-      const timelineProgress = totalProjectDuration > 0 ? Math.min(100, Math.max(0, (daysPassed / totalProjectDuration) * 100)) : 0;
+      const timelineProgressCalculated = totalProjectDuration > 0 ? Math.min(100, Math.max(0, (daysPassed / totalProjectDuration) * 100)) : 0;
       
       setClientCalculatedMetrics({
-        daysRemaining,
-        timelineProgress,
+        daysRemaining: daysRemainingCalculated,
+        timelineProgress: timelineProgressCalculated,
       });
     }
   }, [project]);
@@ -142,8 +142,8 @@ export default function ProjectDetailPage() {
       <Card className="mb-8 shadow-xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-            <CardTitle className="text-3xl font-bold text-primary mb-2 sm:mb-0">{project.name}</CardTitle>
-            <Badge className={cn('text-sm font-semibold px-3 py-1', statusColors[project.status])}>
+            <CardTitle className="text-2xl sm:text-3xl font-bold text-primary mb-2 sm:mb-0">{project.name}</CardTitle>
+            <Badge className={cn('text-sm font-semibold px-3 py-1 shrink-0', statusColors[project.status])}>
               <StatusIcon className="mr-2 h-5 w-5" />
               {project.status}
             </Badge>
@@ -152,7 +152,7 @@ export default function ProjectDetailPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
-            <div className="mb-1 flex justify-between text-sm text-muted-foreground">
+            <div className="mb-1 flex justify-between text-xs text-muted-foreground">
               <span>Task Completion</span>
               <span>{project.completionPercentage}%</span>
             </div>
@@ -305,4 +305,3 @@ export default function ProjectDetailPage() {
     </div>
   );
 }
-

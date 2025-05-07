@@ -1,3 +1,4 @@
+
 import type { Project, ProjectStatus } from '@/types/project';
 import Link from 'next/link';
 import {
@@ -70,10 +71,10 @@ export function ProjectStatusCard({ project }: ProjectStatusCardProps) {
       <Card className="flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-300">
         <CardHeader className="pb-4">
           <div className="flex justify-between items-start">
-            <CardTitle className="text-xl font-semibold text-primary">{project.name}</CardTitle>
+            <CardTitle className="text-lg sm:text-xl font-semibold text-primary">{project.name}</CardTitle>
             <Badge
               className={cn(
-                'text-xs font-semibold text-white', // Ensure text is white for colored badges
+                'text-xs font-semibold text-white shrink-0', // Ensure text is white for colored badges
                 statusColors[project.status]
               )}
             >
