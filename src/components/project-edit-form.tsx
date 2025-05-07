@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Project, KeyMilestone, ProjectStatus } from '@/types/project';
@@ -16,7 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { CalendarIcon, PlusCircle, Trash2, Save, XCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
-import { AssessProjectRiskInputSchema, AssessProjectRiskOutputSchema, assessProjectRisk, type AssessProjectRiskInput } from '@/ai/flows/risk-assessment';
+import { assessProjectRisk, type AssessProjectRiskInput, type AssessProjectRiskOutput } from '@/ai/flows/risk-assessment';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -43,7 +42,7 @@ const projectFormSchema = z.object({
   status: z.enum(['On Track', 'At Risk', 'Delayed', 'Completed', 'Planning']),
   keyMilestones: z.array(milestoneSchema),
   lastUpdated: z.string(),
-  riskAssessment: AssessProjectRiskOutputSchema.optional(),
+  riskAssessment: z.custom<AssessProjectRiskOutput>().optional(),
 });
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
@@ -93,7 +92,7 @@ export function ProjectEditForm({ project, onSubmit, onCancel }: ProjectEditForm
           date: m.date ? new Date(m.date).toISOString() : new Date().toISOString(),
         })),
         lastUpdated: new Date().toISOString(),
-        // riskAssessment will be populated next
+        riskAssessment: values.riskAssessment, // ensure it's passed through
       };
 
       // 2. Construct input for AI risk assessment
