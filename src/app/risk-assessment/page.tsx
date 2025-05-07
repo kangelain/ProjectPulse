@@ -9,8 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ShieldAlert, Lightbulb, CheckCircle2, Loader2, ListChecks } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { ShieldAlert, Lightbulb, CheckCircle2, Loader2, ListChecks, Activity } from 'lucide-react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Progress } from '@/components/ui/progress';
@@ -70,9 +70,9 @@ export default function RiskAssessmentPage() {
   }
   
   const getRiskScoreColor = (score: number) => {
-    if (score <= 33) return 'bg-green-500'; // Low risk
-    if (score <= 66) return 'bg-yellow-500'; // Medium risk
-    return 'bg-red-500'; // High risk
+    if (score <= 33) return 'bg-green-500'; 
+    if (score <= 66) return 'bg-yellow-500'; 
+    return 'bg-red-500'; 
   };
 
   return (
@@ -83,16 +83,16 @@ export default function RiskAssessmentPage() {
           AI-Powered Project Risk Assessment
         </h1>
       </div>
-      <Card className="shadow-xl">
-        <CardHeader>
-          <CardTitle>Analyze Project Risks</CardTitle>
+      <Card className="shadow-lg">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-2xl">Analyze Project Risks</CardTitle>
           <CardDescription>
             Provide project details below. Our AI will analyze potential risks and suggest mitigation strategies.
           </CardDescription>
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 pt-2">
               <FormField
                 control={form.control}
                 name="projectDescription"
@@ -182,17 +182,17 @@ export default function RiskAssessmentPage() {
                 )}
               />
             </CardContent>
-            <CardFooter className="flex justify-end">
-              <Button type="submit" disabled={isLoading}>
+            <CardFooter className="flex justify-end pt-4">
+              <Button type="submit" disabled={isLoading} size="lg">
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Analyzing...
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Analyzing Risks...
                   </>
                 ) : (
                   <>
-                    <Lightbulb className="mr-2 h-4 w-4" />
-                    Assess Risks
+                    <Lightbulb className="mr-2 h-5 w-5" />
+                    Assess Project Risks
                   </>
                 )}
               </Button>
@@ -203,25 +203,28 @@ export default function RiskAssessmentPage() {
 
       {error && (
         <Alert variant="destructive" className="mt-8">
-          <AlertTriangle className="h-4 w-4" />
+          <ShieldAlert className="h-4 w-4" />
           <AlertTitle>Assessment Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       {assessmentResult && (
-        <Card className="mt-8 shadow-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <CheckCircle2 className="h-6 w-6 mr-2 text-green-500" />
+        <Card className="mt-8 shadow-lg">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center text-2xl">
+              <CheckCircle2 className="h-7 w-7 mr-3 text-green-500" />
               Risk Assessment Results
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 pt-2">
             <div>
               <h3 className="text-lg font-semibold mb-2 flex items-center">
-                <ShieldAlert className="h-5 w-5 mr-2 text-accent" />
-                Overall Risk Score: {assessmentResult.overallRiskScore} / 100
+                <Activity className="h-5 w-5 mr-2 text-accent" />
+                 Overall Risk Score: 
+                <span className={cn("ml-2 px-2 py-0.5 rounded text-sm text-white", getRiskScoreColor(assessmentResult.overallRiskScore))}>
+                   {assessmentResult.overallRiskScore} / 100
+                </span>
               </h3>
               <Progress 
                 value={assessmentResult.overallRiskScore} 
@@ -229,20 +232,20 @@ export default function RiskAssessmentPage() {
                 indicatorClassName={getRiskScoreColor(assessmentResult.overallRiskScore)}
                 aria-label={`Overall risk score: ${assessmentResult.overallRiskScore} out of 100`}
               />
-               <p className="text-sm text-muted-foreground mt-1">
-                {assessmentResult.overallRiskScore <= 33 ? "Low Risk" : assessmentResult.overallRiskScore <= 66 ? "Medium Risk" : "High Risk"}
+               <p className="text-sm text-muted-foreground mt-1.5">
+                Interpretation: {assessmentResult.overallRiskScore <= 33 ? "Low Risk" : assessmentResult.overallRiskScore <= 66 ? "Medium Risk" : "High Risk"}
               </p>
             </div>
 
-            <div>
+            <div className="p-4 bg-secondary/40 rounded-lg shadow-sm">
               <h3 className="text-lg font-semibold mb-2 flex items-center">
                 <ListChecks className="h-5 w-5 mr-2 text-accent" />
                 Identified Risks
               </h3>
               {assessmentResult.identifiedRisks.length > 0 ? (
-                <ul className="list-disc list-inside space-y-1 pl-4 bg-secondary/30 p-4 rounded-md">
+                <ul className="list-disc list-inside space-y-1.5 pl-2">
                   {assessmentResult.identifiedRisks.map((risk, index) => (
-                    <li key={`risk-${index}`} className="text-sm">{risk}</li>
+                    <li key={`risk-${index}`} className="text-sm text-foreground">{risk}</li>
                   ))}
                 </ul>
               ) : (
@@ -250,15 +253,15 @@ export default function RiskAssessmentPage() {
               )}
             </div>
 
-            <div>
+            <div className="p-4 bg-secondary/40 rounded-lg shadow-sm">
               <h3 className="text-lg font-semibold mb-2 flex items-center">
                 <Lightbulb className="h-5 w-5 mr-2 text-accent" />
                 Mitigation Recommendations
               </h3>
                {assessmentResult.riskMitigationRecommendations.length > 0 ? (
-                <ul className="list-disc list-inside space-y-1 pl-4 bg-secondary/30 p-4 rounded-md">
+                <ul className="list-disc list-inside space-y-1.5 pl-2">
                   {assessmentResult.riskMitigationRecommendations.map((rec, index) => (
-                    <li key={`rec-${index}`} className="text-sm">{rec}</li>
+                    <li key={`rec-${index}`} className="text-sm text-foreground">{rec}</li>
                   ))}
                 </ul>
               ) : (

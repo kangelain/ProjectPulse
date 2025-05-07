@@ -11,58 +11,58 @@ export function Header() {
   const { authState, logout } = useAuth();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center">
-        <Link href="/" className="mr-2 sm:mr-4 flex items-center space-x-1 sm:space-x-2">
-          <Rocket className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-          <span className="font-bold sm:inline-block text-base sm:text-lg">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70 shadow-sm">
+      <div className="container flex h-16 items-center px-4 sm:px-6">
+        <Link href="/" className="mr-4 flex items-center space-x-2">
+          <Rocket className="h-6 w-6 text-primary" />
+          <span className="font-bold text-xl text-foreground">
             ProjectPulse
           </span>
         </Link>
-        <nav className="flex flex-1 items-center space-x-1 sm:space-x-2 flex-wrap">
-          <Button variant="ghost" asChild className="px-2 sm:px-3 text-xs sm:text-sm">
+        <nav className="flex flex-1 items-center space-x-1 sm:space-x-2">
+          <Button variant="ghost" asChild className="px-2.5 sm:px-3 text-sm">
             <Link href="/">
-              <LayoutDashboard className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <LayoutDashboard className="mr-1.5 h-4 w-4" />
               Dashboard
             </Link>
           </Button>
-          <Button variant="ghost" asChild className="px-2 sm:px-3 text-xs sm:text-sm">
+          <Button variant="ghost" asChild className="px-2.5 sm:px-3 text-sm">
             <Link href="/risk-assessment">
-              <ShieldAlert className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-              Risk Assessment
+              <ShieldAlert className="mr-1.5 h-4 w-4" />
+              Risk AI
             </Link>
           </Button>
-          <Button variant="ghost" asChild className="px-2 sm:px-3 text-xs sm:text-sm">
+          <Button variant="ghost" asChild className="px-2.5 sm:px-3 text-sm">
             <Link href="/reports">
-              <FileText className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <FileText className="mr-1.5 h-4 w-4" />
               Reports
             </Link>
           </Button>
         </nav>
         
-        <div className="flex items-center space-x-1 sm:space-x-2">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           {authState.loading ? (
             <>
-              <Skeleton className="h-8 w-16 sm:h-9 sm:w-20 rounded-md" />
-              <Skeleton className="h-8 w-8 sm:h-9 sm:w-9 rounded-full" />
+              <Skeleton className="h-9 w-20 rounded-md" />
+              <Skeleton className="h-9 w-9 rounded-full" />
             </>
           ) : authState.isAuthenticated ? (
             <>
-              <Button variant="ghost" asChild className="px-2 sm:px-3 text-xs sm:text-sm">
+              <Button variant="ghost" asChild className="px-2.5 sm:px-3 text-sm">
                 <Link href="/profile">
-                  <UserCircle className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                  <UserCircle className="mr-1.5 h-4 w-4" />
                   Profile
                 </Link>
               </Button>
-              <Button variant="outline" onClick={logout} size="sm" className="text-xs sm:text-sm">
-                <LogOut className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <Button variant="outline" onClick={logout} size="sm" className="text-sm">
+                <LogOut className="mr-1.5 h-4 w-4" />
                 Logout
               </Button>
             </>
           ) : (
-            <Button asChild size="sm" className="text-xs sm:text-sm">
+            <Button asChild size="sm" className="text-sm">
               <Link href="/login">
-                <LogIn className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                <LogIn className="mr-1.5 h-4 w-4" />
                 Login
               </Link>
             </Button>
@@ -72,4 +72,3 @@ export function Header() {
     </header>
   );
 }
-

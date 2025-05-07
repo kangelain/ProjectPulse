@@ -1,7 +1,7 @@
 
 'use client';
 
-import * as React from 'react'; // Added React import
+import * as React from 'react';
 import { useState, useEffect, useMemo } from 'react';
 import { mockProjects } from '@/lib/mock-data';
 import type { Project, ProjectStatus } from '@/types/project';
@@ -20,15 +20,15 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 const statusColors: Record<ProjectStatus, string> = {
   'On Track': 'bg-green-500 text-white',
   'At Risk': 'bg-red-500 text-white',
-  'Delayed': 'bg-yellow-500 text-white',
+  'Delayed': 'bg-yellow-500 text-black', // Ensure contrast for yellow
   'Completed': 'bg-blue-500 text-white',
   'Planning': 'bg-gray-500 text-white',
 };
 
 const priorityColors: Record<Project['priority'], string> = {
-  High: 'border-red-500 text-red-700 dark:text-red-400',
-  Medium: 'border-yellow-500 text-yellow-700 dark:text-yellow-400',
-  Low: 'border-green-500 text-green-700 dark:text-green-400',
+  High: 'border-red-600 text-red-700 dark:text-red-500 bg-red-50 dark:bg-red-900/30',
+  Medium: 'border-yellow-600 text-yellow-700 dark:text-yellow-500 bg-yellow-50 dark:bg-yellow-900/30',
+  Low: 'border-green-600 text-green-700 dark:text-green-500 bg-green-50 dark:bg-green-900/30',
 };
 
 const statusIcons: Record<ProjectStatus, React.ElementType> = {
@@ -94,7 +94,7 @@ export default function ReportsPage() {
         };
       } catch (e) {
         console.error(`Error calculating metrics for project ${project.id}:`, e);
-        metricsData[project.id] = null; // Handle potential date parsing errors
+        metricsData[project.id] = null; 
       }
     });
     setProjectMetrics(metricsData);
@@ -127,7 +127,7 @@ export default function ReportsPage() {
       ...s,
       averageCompletion: s.totalProjects > 0 ? parseFloat((s.averageCompletion / s.totalProjects).toFixed(2)) : 0,
       budgetVariance: s.totalBudget - s.totalSpent,
-    }));
+    })).sort((a,b) => a.portfolioName.localeCompare(b.portfolioName));
   }, []);
 
   const teamLeadWorkloads = useMemo<TeamLeadWorkload[]>(() => {
@@ -167,40 +167,40 @@ export default function ReportsPage() {
       </div>
 
       <Tabs defaultValue="performance" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 mb-6">
-          <TabsTrigger value="performance">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 gap-2 mb-6">
+          <TabsTrigger value="performance" className="text-sm py-2.5">
             <ListChecks className="mr-2 h-4 w-4" /> Project Performance
           </TabsTrigger>
-          <TabsTrigger value="portfolio">
+          <TabsTrigger value="portfolio" className="text-sm py-2.5">
             <Briefcase className="mr-2 h-4 w-4" /> Portfolio Summaries
           </TabsTrigger>
-          <TabsTrigger value="resources">
+          <TabsTrigger value="resources" className="text-sm py-2.5">
             <UsersRound className="mr-2 h-4 w-4" /> Team Overview
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="performance">
-          <Card className="shadow-xl">
-            <CardHeader>
-              <CardTitle>Project Performance Details</CardTitle>
+        <TabsContent value="performance" className="mt-6">
+          <Card className="shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-2xl">Project Performance Details</CardTitle>
               <CardDescription>Comprehensive overview of all projects, their status, and key metrics.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-2">
               <ScrollArea className="h-[600px] w-full">
                 <Table>
-                  <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
                     <TableRow>
-                      <TableHead className="w-[200px]">Project Name</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Priority</TableHead>
-                      <TableHead className="text-right">Completion %</TableHead>
-                      <TableHead className="text-right">Budget</TableHead>
-                      <TableHead className="text-right">Spent</TableHead>
-                      <TableHead className="text-right">Variance</TableHead>
-                      <TableHead>Start Date</TableHead>
-                      <TableHead>End Date</TableHead>
-                      <TableHead>Days Left/Overdue</TableHead>
-                      <TableHead>Team Lead</TableHead>
+                      <TableHead className="w-[220px] py-3">Project Name</TableHead>
+                      <TableHead className="py-3">Status</TableHead>
+                      <TableHead className="py-3">Priority</TableHead>
+                      <TableHead className="text-right py-3">Completion %</TableHead>
+                      <TableHead className="text-right py-3">Budget</TableHead>
+                      <TableHead className="text-right py-3">Spent</TableHead>
+                      <TableHead className="text-right py-3">Variance</TableHead>
+                      <TableHead className="py-3">Start Date</TableHead>
+                      <TableHead className="py-3">End Date</TableHead>
+                      <TableHead className="py-3">Days Left/Overdue</TableHead>
+                      <TableHead className="py-3">Team Lead</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -208,40 +208,40 @@ export default function ReportsPage() {
                       const metrics = projectMetrics[project.id];
                       const StatusIcon = statusIcons[project.status];
                       return (
-                        <TableRow key={project.id}>
-                          <TableCell className="font-medium text-primary">{project.name}</TableCell>
-                          <TableCell>
-                            <Badge className={cn('text-xs', statusColors[project.status])}>
+                        <TableRow key={project.id} className="hover:bg-muted/30">
+                          <TableCell className="font-medium text-primary py-3">{project.name}</TableCell>
+                          <TableCell className="py-3">
+                            <Badge className={cn('text-xs px-2.5 py-1', statusColors[project.status])}>
                               <StatusIcon className="mr-1.5 h-3 w-3" />
                               {project.status}
                             </Badge>
                           </TableCell>
-                           <TableCell>
-                            <Badge variant="outline" className={cn("text-xs", priorityColors[project.priority])}>
+                           <TableCell className="py-3">
+                            <Badge variant="outline" className={cn("text-xs px-2 py-0.5", priorityColors[project.priority])}>
                               {project.priority}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right py-3">
                             <div className="flex items-center justify-end">
-                                <span className="mr-2">{project.completionPercentage}%</span>
-                                <Progress value={project.completionPercentage} className="h-2 w-16" aria-label={`${project.completionPercentage}% complete`} />
+                                <span className="mr-2 text-sm">{project.completionPercentage}%</span>
+                                <Progress value={project.completionPercentage} className="h-2 w-20" aria-label={`${project.completionPercentage}% complete`} />
                             </div>
                           </TableCell>
-                          <TableCell className="text-right">{formatCurrency(project.budget)}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(project.spent)}</TableCell>
-                          <TableCell className={cn("text-right", project.budget - project.spent >= 0 ? 'text-green-600' : 'text-red-600')}>
+                          <TableCell className="text-right py-3">{formatCurrency(project.budget)}</TableCell>
+                          <TableCell className="text-right py-3">{formatCurrency(project.spent)}</TableCell>
+                          <TableCell className={cn("text-right py-3 font-medium", project.budget - project.spent >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
                             {formatCurrency(project.budget - project.spent)}
                           </TableCell>
-                          <TableCell>{formatDate(project.startDate)}</TableCell>
-                          <TableCell>{formatDate(project.endDate)}</TableCell>
-                          <TableCell>
-                            {isLoadingMetrics ? <Loader2 className="h-4 w-4 animate-spin"/> : metrics ? (
-                              metrics.isOverdue ? 
-                              <span className="text-red-600">{metrics.daysRemaining} days overdue</span> : 
-                              <span>{metrics.daysRemaining} days left</span>
-                            ) : 'N/A'}
+                          <TableCell className="py-3 text-muted-foreground">{formatDate(project.startDate)}</TableCell>
+                          <TableCell className="py-3 text-muted-foreground">{formatDate(project.endDate)}</TableCell>
+                          <TableCell className="py-3">
+                            {isLoadingMetrics ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground"/> : metrics ? (
+                              metrics.isOverdue && project.status !== 'Completed' ? 
+                              <span className="text-red-600 dark:text-red-400 font-medium">{metrics.daysRemaining} days overdue</span> : 
+                              <span className="text-muted-foreground">{metrics.daysRemaining} days left</span>
+                            ) : <span className="text-muted-foreground">N/A</span>}
                           </TableCell>
-                          <TableCell>{project.teamLead}</TableCell>
+                          <TableCell className="py-3 text-muted-foreground">{project.teamLead}</TableCell>
                         </TableRow>
                       );
                     })}
@@ -252,41 +252,41 @@ export default function ReportsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="portfolio">
+        <TabsContent value="portfolio" className="mt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {portfolioSummaries.map(summary => (
-              <Card key={summary.portfolioName} className="shadow-xl flex flex-col">
-                <CardHeader>
-                  <CardTitle className="text-primary">{summary.portfolioName}</CardTitle>
+              <Card key={summary.portfolioName} className="shadow-lg flex flex-col">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-xl text-primary">{summary.portfolioName}</CardTitle>
                   <CardDescription>{summary.totalProjects} projects</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3 flex-grow">
+                <CardContent className="space-y-4 flex-grow pt-2">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Avg. Completion</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Avg. Completion</p>
                     <div className="flex items-center">
-                      <Progress value={summary.averageCompletion} className="h-2 mr-2 flex-1" aria-label={`Average completion ${summary.averageCompletion}%`} />
-                      <span className="text-sm font-semibold">{summary.averageCompletion}%</span>
+                      <Progress value={summary.averageCompletion} className="h-2.5 mr-2 flex-1" aria-label={`Average completion ${summary.averageCompletion}%`} />
+                      <span className="text-sm font-semibold text-foreground">{summary.averageCompletion}%</span>
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Financials</p>
-                    <p className="text-xs">Budget: {formatCurrency(summary.totalBudget)}</p>
-                    <p className="text-xs">Spent: {formatCurrency(summary.totalSpent)}</p>
-                    <p className={cn("text-xs font-semibold", summary.budgetVariance >=0 ? 'text-green-600' : 'text-red-600')}>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Financials</p>
+                    <p className="text-xs text-muted-foreground">Budget: {formatCurrency(summary.totalBudget)}</p>
+                    <p className="text-xs text-muted-foreground">Spent: {formatCurrency(summary.totalSpent)}</p>
+                    <p className={cn("text-xs font-semibold", summary.budgetVariance >=0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
                       Variance: {formatCurrency(summary.budgetVariance)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Status Breakdown</p>
-                    <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground mb-1.5">Status Breakdown</p>
+                    <div className="space-y-1.5">
                     {Object.entries(summary.statusCounts).map(([status, count]) =>
                       count > 0 ? (
                         <div key={status} className="flex justify-between items-center text-xs">
-                           <Badge className={cn('text-xs py-0.5 px-1.5', statusColors[status as ProjectStatus])} variant="default">
+                           <Badge className={cn('text-xs py-0.5 px-2', statusColors[status as ProjectStatus])} variant="default">
                              {statusIcons[status as ProjectStatus] && React.createElement(statusIcons[status as ProjectStatus], {className: "h-3 w-3 mr-1"})}
                              {status}
                            </Badge>
-                          <span>{count} project{count > 1 ? 's' : ''}</span>
+                          <span className="text-muted-foreground">{count} project{count > 1 ? 's' : ''}</span>
                         </div>
                       ) : null
                     )}
@@ -295,59 +295,71 @@ export default function ReportsPage() {
                 </CardContent>
               </Card>
             ))}
+             {portfolioSummaries.length === 0 && (
+                <Card className="md:col-span-2 lg:col-span-3 shadow-lg">
+                    <CardContent className="text-center py-16">
+                        <Briefcase className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground text-lg">No portfolio data available.</p>
+                        <p className="text-sm text-muted-foreground">Projects might not be assigned to portfolios yet.</p>
+                    </CardContent>
+                </Card>
+            )}
           </div>
         </TabsContent>
 
-        <TabsContent value="resources">
-          <Card className="shadow-xl">
-            <CardHeader>
-              <CardTitle>Team Overview & Workload</CardTitle>
+        <TabsContent value="resources" className="mt-6">
+          <Card className="shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-2xl">Team Overview & Workload</CardTitle>
               <CardDescription>Breakdown of projects managed by each team lead.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-2">
               <ScrollArea className="h-[600px] w-full">
                 <Table>
-                  <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
                     <TableRow>
-                      <TableHead className="w-[200px]">Team Lead</TableHead>
-                      <TableHead className="text-center w-[120px]">Project Count</TableHead>
-                      <TableHead>Active Projects (Status & Priority)</TableHead>
+                      <TableHead className="w-[200px] py-3">Team Lead</TableHead>
+                      <TableHead className="text-center w-[120px] py-3">Project Count</TableHead>
+                      <TableHead className="py-3">Active Projects (Status & Priority)</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {teamLeadWorkloads.map(lead => (
-                      <TableRow key={lead.teamLead}>
-                        <TableCell className="font-medium">{lead.teamLead}</TableCell>
-                        <TableCell className="text-center">{lead.projectCount}</TableCell>
-                        <TableCell>
+                      <TableRow key={lead.teamLead} className="hover:bg-muted/30">
+                        <TableCell className="font-medium py-3">{lead.teamLead}</TableCell>
+                        <TableCell className="text-center py-3">{lead.projectCount}</TableCell>
+                        <TableCell className="py-3">
                           <div className="flex flex-wrap gap-2">
                             {lead.projects.filter(p => p.status !== 'Completed').map(p => (
                                <TooltipProvider key={p.id} delayDuration={100}>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Badge variant="secondary" className="cursor-default text-xs font-normal">
+                                    <Badge variant="secondary" className="cursor-default text-xs font-normal px-2 py-1 hover:bg-muted">
                                       <span className="truncate max-w-[150px] mr-1.5">{p.name}</span>
-                                      <Badge className={cn('text-xs py-0 px-1', statusColors[p.status])}>
+                                      <Badge className={cn('text-[0.65rem] leading-tight py-0 px-1', statusColors[p.status])}>
                                         {p.status.substring(0,1)}
                                       </Badge>
-                                      <Badge variant="outline" className={cn("ml-1 text-xs py-0 px-1", priorityColors[p.priority])}>
+                                      <Badge variant="outline" className={cn("ml-1 text-[0.65rem] leading-tight py-0 px-1", priorityColors[p.priority])}>
                                         {p.priority.substring(0,1)}
                                       </Badge>
                                     </Badge>
                                   </TooltipTrigger>
-                                  <TooltipContent className="text-xs">
+                                  <TooltipContent className="text-xs p-2 bg-popover shadow-md rounded-md">
                                     <p className="font-semibold">{p.name}</p>
-                                    <p>Status: {p.status}</p>
-                                    <p>Priority: {p.priority}</p>
-                                    <p>Completion: {p.completionPercentage}%</p>
+                                    <p className="text-muted-foreground">Status: {p.status}</p>
+                                    <p className="text-muted-foreground">Priority: {p.priority}</p>
+                                    <p className="text-muted-foreground">Completion: {p.completionPercentage}%</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
                             ))}
                              {lead.projects.filter(p => p.status === 'Completed').length > 0 && (
-                                <Badge variant="outline" className="text-xs font-normal">
+                                <Badge variant="outline" className="text-xs font-normal px-2 py-1 border-dashed">
                                     +{lead.projects.filter(p => p.status === 'Completed').length} completed
                                 </Badge>
+                             )}
+                             {lead.projects.filter(p => p.status !== 'Completed').length === 0 && (
+                                <span className="text-sm text-muted-foreground italic">No active projects.</span>
                              )}
                           </div>
                         </TableCell>
@@ -363,4 +375,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-
