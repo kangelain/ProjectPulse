@@ -21,4 +21,6 @@ export interface Project {
   keyMilestones: KeyMilestone[];
   lastUpdated: string;
   priority: 'High' | 'Medium' | 'Low';
+  portfolio: string; // Added portfolio field
 }
+

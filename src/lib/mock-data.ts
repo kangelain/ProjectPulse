@@ -19,6 +19,7 @@ export const mockProjects: Project[] = [
     ],
     lastUpdated: '2024-07-20',
     priority: 'High',
+    portfolio: 'Core Infrastructure',
   },
   {
     id: 'proj-002',
@@ -38,6 +39,7 @@ export const mockProjects: Project[] = [
     ],
     lastUpdated: '2024-07-18',
     priority: 'High',
+    portfolio: 'Core Infrastructure',
   },
   {
     id: 'proj-003',
@@ -57,6 +59,7 @@ export const mockProjects: Project[] = [
     ],
     lastUpdated: '2024-07-15',
     priority: 'Medium',
+    portfolio: 'Customer Experience',
   },
   {
     id: 'proj-004',
@@ -76,6 +79,7 @@ export const mockProjects: Project[] = [
     ],
     lastUpdated: '2024-04-01',
     priority: 'High',
+    portfolio: 'Core Infrastructure',
   },
    {
     id: 'proj-005',
@@ -94,5 +98,26 @@ export const mockProjects: Project[] = [
     ],
     lastUpdated: '2024-07-19',
     priority: 'Medium',
+    portfolio: 'Innovation Lab',
   },
+  {
+    id: 'proj-006',
+    name: 'Apollo Marketing Campaign',
+    status: 'On Track',
+    description: 'Launch a new marketing campaign for the Q4 product release.',
+    startDate: '2024-07-01',
+    endDate: '2024-10-31',
+    budget: 120000,
+    spent: 30000,
+    completionPercentage: 20,
+    teamLead: 'Frank Moses',
+    keyMilestones: [
+      { id: 'm6-1', name: 'Campaign Strategy Finalized', date: '2024-07-15', status: 'Completed' },
+      { id: 'm6-2', name: 'Creative Assets Production', date: '2024-08-30', status: 'In Progress' },
+      { id: 'm6-3', name: 'Campaign Launch', date: '2024-10-01', status: 'Pending' },
+    ],
+    lastUpdated: '2024-07-22',
+    priority: 'Medium',
+    portfolio: 'Customer Experience',
+  }
 ];
