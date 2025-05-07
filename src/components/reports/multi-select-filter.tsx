@@ -4,7 +4,6 @@
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command';
-import { Slot } from "@radix-ui/react-slot"; // Changed import
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ChevronsUpDown, Filter as FilterIcon } from 'lucide-react';
 
@@ -38,7 +37,7 @@ export function MultiSelectFilter({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Slot> {/* Changed FormControl to Slot */}
+          {/* Removed Slot component */}
           <Button
             variant="outline"
             role="combobox"
@@ -51,7 +50,6 @@ export function MultiSelectFilter({
             </div>
             <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
           </Button>
-        </Slot>
       </PopoverTrigger>
       <PopoverContent className={popoverContentClassName || "w-[200px] p-0"}>
         <Command>
