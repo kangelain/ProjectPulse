@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useEffect } from 'react'; 
+import { useState, useEffect } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Trash2, Calculator, Percent, DollarSign } from 'lucide-react'; 
+import { PlusCircle, Trash2, Calculator, Percent, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const budgetItemSchema = z.object({
@@ -27,7 +28,7 @@ const budgetCalculatorSchema = z.object({
 type BudgetFormValues = z.infer<typeof budgetCalculatorSchema>;
 
 const defaultCategories = [
-  "Personnel", "Equipment", "Software/Tools", "Marketing", "Travel", 
+  "Personnel", "Equipment", "Software/Tools", "Marketing", "Travel",
   "Training", "Legal/Consulting", "Office Space", "Utilities", "Other"
 ];
 
@@ -61,11 +62,11 @@ export function ProjectBudgetCalculator() {
 
     setTotalBudget(currentSubtotal + currentContingencyAmount);
   };
-  
+
   const watchedItems = form.watch("budgetItems");
   const watchedContingency = form.watch("contingencyPercentage");
 
-  useEffect(() => { 
+  useEffect(() => {
     calculateBudget(form.getValues());
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedItems, watchedContingency, form.getValues]);
@@ -182,7 +183,7 @@ export function ProjectBudgetCalculator() {
             />
           </CardContent>
           <CardFooter className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 gap-3 border-t"> {/* Adjusted padding and gap */}
-            <div className="space-y-1.5 text-xs sm:text-sm"> {/* Adjusted spacing and size */}
+            <div className="space-y-1.5 text-xs sm:text-sm w-full sm:w-auto"> {/* Adjusted spacing, size, and width */}
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Subtotal:</span>
                 <span className="font-semibold text-foreground ml-2">{formatCurrency(subtotal)}</span>
@@ -198,7 +199,7 @@ export function ProjectBudgetCalculator() {
                 </span>
               </div>
             </div>
-            <Button type="submit" size="default" className="w-full sm:w-auto h-10 text-sm font-semibold"> {/* Adjusted size and height */}
+            <Button type="submit" size="default" className="w-full sm:w-auto h-10 text-sm font-semibold mt-3 sm:mt-0"> {/* Adjusted size, height, and margin */}
               <Calculator className="mr-1.5 h-4 w-4" /> Calculate Budget {/* Adjusted icon size */}
             </Button>
           </CardFooter>

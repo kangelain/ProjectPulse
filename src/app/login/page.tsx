@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -30,7 +31,7 @@ export default function LoginPage() {
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
       username: '',
-      role: undefined, 
+      role: undefined,
     },
   });
 
@@ -48,7 +49,7 @@ export default function LoginPage() {
       </div>
     );
   }
-  
+
   if (authState.isAuthenticated) {
     // This will be brief as useEffect will redirect.
     return (
@@ -65,17 +66,17 @@ export default function LoginPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-secondary/30 p-4">
-      <Card className="w-full max-w-md shadow-xl"> {/* Slightly increased shadow for focus, Asana uses subtle shadows */}
+      <Card className="w-full max-w-md shadow-xl border border-border/50"> {/* Added subtle border */}
         <CardHeader className="text-center pt-8 pb-6">
-          <div className="mx-auto bg-primary text-primary-foreground rounded-full p-3 w-fit mb-4 shadow-sm"> {/* Reduced padding, smaller shadow */}
-            <UserCircle className="h-10 w-10" /> {/* Slightly smaller icon */}
+          <div className="mx-auto bg-primary text-primary-foreground rounded-full p-2.5 w-fit mb-4 shadow-sm"> {/* Adjusted padding */}
+            <UserCircle className="h-8 w-8" /> {/* Adjusted size */}
           </div>
-          <CardTitle className="text-2xl font-semibold text-foreground">Welcome Back</CardTitle> {/* Adjusted title size */}
-          <CardDescription className="text-sm text-muted-foreground pt-1">Please enter your details to log in.</CardDescription>
+          <CardTitle className="text-xl font-semibold text-foreground">Welcome Back</CardTitle> {/* Adjusted size */}
+          <CardDescription className="text-xs text-muted-foreground pt-1">Please enter your details to log in.</CardDescription> {/* Adjusted size */}
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-5 px-6 pb-6"> {/* Adjusted spacing */}
+            <CardContent className="space-y-4 px-6 pb-5"> {/* Adjusted spacing/padding */}
               <FormField
                 control={form.control}
                 name="username"
@@ -83,9 +84,9 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel className="text-xs font-medium">Username</FormLabel> {/* Smaller label */}
                     <FormControl>
-                      <Input placeholder="Enter your username" {...field} className="h-10 text-sm" /> {/* Consistent height and text size */}
+                      <Input placeholder="Enter your username" {...field} className="h-9 text-sm" /> {/* Adjusted height */}
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-xs"/> {/* Ensure message size matches */}
                   </FormItem>
                 )}
               />
@@ -94,29 +95,29 @@ export default function LoginPage() {
                 name="role"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-medium">Select Role (Demo)</FormLabel> {/* Smaller label */}
+                    <FormLabel className="text-xs font-medium">Select Role (Demo)</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                         <SelectTrigger className="h-10 text-sm"> {/* Consistent height and text size */}
+                         <SelectTrigger className="h-9 text-sm"> {/* Adjusted height */}
                           <SelectValue placeholder="Select a role" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {Object.values(Role).map((roleValue) => (
-                          <SelectItem key={roleValue} value={roleValue} className="text-sm py-2"> {/* Consistent text size and padding */}
+                          <SelectItem key={roleValue} value={roleValue} className="text-sm py-1.5"> {/* Adjusted padding */}
                             {roleValue}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormMessage />
+                    <FormMessage className="text-xs"/>
                   </FormItem>
                 )}
               />
             </CardContent>
             <CardFooter className="p-6 pt-0"> {/* Use CardFooter for actions, ensure consistent padding */}
-              <Button type="submit" className="w-full h-11 text-sm font-semibold" size="lg"> {/* Consistent height, text size, and font weight */}
-                <LogIn className="mr-2 h-4 w-4" /> Login
+              <Button type="submit" className="w-full h-10 text-sm font-semibold" size="default"> {/* Adjusted height/size */}
+                <LogIn className="mr-1.5 h-4 w-4" /> Login {/* Adjusted icon size */}
               </Button>
             </CardFooter>
           </form>

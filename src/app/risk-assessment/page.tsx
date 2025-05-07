@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { AssessProjectRiskInput, AssessProjectRiskOutput } from '@/ai/flows/risk-assessment';
@@ -79,7 +80,7 @@ Budget Utilization: ${project.budget > 0 ? ((project.spent / project.budget) * 1
 Assigned Team: ${project.assignedUsers && project.assignedUsers.length > 0 ? project.assignedUsers.join(', ') : 'No specific team members assigned.'}.
 Portfolio: ${project.portfolio}.
 Priority: ${project.priority}.`;
-      
+
       // Preserve historical data if user entered it manually before selecting a project
       const currentHistoricalData = form.getValues('historicalData');
 
@@ -106,7 +107,7 @@ Priority: ${project.priority}.`;
         projectTimeline: '',
         projectBudget: '',
         teamComposition: '',
-        historicalData: historicalDataValue || '', 
+        historicalData: historicalDataValue || '',
       });
     }
     // This effect runs when selectedProjectId changes.
@@ -157,10 +158,10 @@ Priority: ${project.priority}.`;
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex items-center mb-6">
-        <ShieldAlert className="h-7 w-7 mr-2.5 text-primary" />
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+    <div className="container mx-auto py-8"> {/* Standardized container padding */}
+      <div className="flex items-center mb-6"> {/* Reduced bottom margin */}
+        <ShieldAlert className="h-7 w-7 mr-2.5 text-primary" /> {/* Adjusted icon size and margin */}
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground"> {/* Adjusted font size */}
           AI-Powered Project Risk Assessment
         </h1>
       </div>
@@ -323,7 +324,7 @@ Priority: ${project.priority}.`;
       </Card>
 
       {error && (
-        <Alert variant="destructive" className="mt-6">
+        <Alert variant="destructive" className="mt-6 p-3"> {/* Compact Alert */}
           <ShieldAlert className="h-4 w-4" />
           <AlertTitle className="text-sm font-semibold">Assessment Error</AlertTitle>
           <AlertDescription className="text-xs">{error}</AlertDescription>

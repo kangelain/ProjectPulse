@@ -37,9 +37,9 @@ export default function ProfilePage() {
     <div className="container mx-auto py-10 px-4"> {/* Simplified container padding */}
       <Card className="max-w-lg mx-auto shadow-xl"> {/* Adjusted max-width and shadow */}
         <CardHeader className="text-center items-center pt-8 pb-6">
-          <Avatar className="h-24 w-24 mb-4 border-2 border-primary/50 shadow-sm"> {/* Slightly smaller avatar, softer border */}
+          <Avatar className="h-20 w-20 mb-4 border-2 border-primary/30 shadow-sm"> {/* Slightly smaller avatar, softer border */}
             <AvatarImage src={`https://picsum.photos/seed/${user.username}/200`} alt={user.username} data-ai-hint="profile avatar" />
-            <AvatarFallback className="text-3xl bg-secondary text-secondary-foreground"> {/* Adjusted text size */}
+            <AvatarFallback className="text-2xl bg-secondary text-secondary-foreground"> {/* Adjusted text size */}
               {initial}
             </AvatarFallback>
           </Avatar>
@@ -47,34 +47,34 @@ export default function ProfilePage() {
           <CardDescription className="text-sm text-muted-foreground pt-1">Your personal profile and settings.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 px-6 sm:px-8 pb-8"> {/* Adjusted spacing */}
-          <div className="flex items-center space-x-3 p-3 bg-secondary/50 rounded-md shadow-xs"> {/* Softer background, smaller padding, subtle shadow */}
-            <UserCircle className="h-6 w-6 text-primary flex-shrink-0" /> {/* Adjusted icon size */}
+          <div className="flex items-center space-x-3 p-3 bg-secondary/50 rounded-md shadow-xs border border-border/50"> {/* Softer background, smaller padding, subtle shadow, added border */}
+            <UserCircle className="h-5 w-5 text-primary flex-shrink-0" /> {/* Adjusted icon size */}
             <div>
               <p className="text-xs text-muted-foreground font-medium">Username</p>
-              <p className="font-medium text-md text-foreground">{user.username}</p> {/* Adjusted text size */}
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-3 p-3 bg-secondary/50 rounded-md shadow-xs">
-            <Mail className="h-6 w-6 text-primary flex-shrink-0" />
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Email (Demo)</p>
-              <p className="font-medium text-md text-foreground">{userEmail}</p>
+              <p className="font-medium text-sm text-foreground">{user.username}</p> {/* Adjusted text size */}
             </div>
           </div>
 
-          <div className="flex items-center space-x-3 p-3 bg-secondary/50 rounded-md shadow-xs">
-            <ShieldCheck className="h-6 w-6 text-primary flex-shrink-0" />
+          <div className="flex items-center space-x-3 p-3 bg-secondary/50 rounded-md shadow-xs border border-border/50">
+            <Mail className="h-5 w-5 text-primary flex-shrink-0" />
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Email (Demo)</p>
+              <p className="font-medium text-sm text-foreground">{userEmail}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3 p-3 bg-secondary/50 rounded-md shadow-xs border border-border/50">
+            <ShieldCheck className="h-5 w-5 text-primary flex-shrink-0" />
             <div>
               <p className="text-xs text-muted-foreground font-medium">Role</p>
-              <Badge variant="secondary" className="font-medium text-sm px-3 py-1"> {/* Changed variant to secondary for Asana-like subtlety */}
+              <Badge variant="secondary" className="font-medium text-xs px-2.5 py-0.5"> {/* Changed variant to secondary, adjusted size/padding */}
                 {user.role}
               </Badge>
             </div>
           </div>
 
-          <Button onClick={logout} className="w-full mt-6 h-11 text-sm font-semibold" variant="destructive" size="lg"> {/* Adjusted margin and height */}
-            <LogOut className="mr-2 h-4 w-4" /> Logout
+          <Button onClick={logout} className="w-full mt-6 h-10 text-sm font-semibold" variant="destructive" size="default"> {/* Adjusted margin and height/size */}
+            <LogOut className="mr-1.5 h-4 w-4" /> Logout {/* Adjusted icon size */}
           </Button>
         </CardContent>
       </Card>

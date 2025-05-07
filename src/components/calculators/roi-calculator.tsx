@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -45,7 +46,7 @@ export function RoiCalculator() {
       initialInvestment: 100000,
       projectLifespan: 5,
       discountRate: 10,
-      cashFlows: Array(5).fill({ value: 25000 }), 
+      cashFlows: Array(5).fill({ value: 25000 }),
     },
     mode: 'onChange', // Calculate on change
   });
@@ -61,23 +62,23 @@ export function RoiCalculator() {
     const currentCashFlowsLength = fields.length;
     if (projectLifespan > 0 && projectLifespan <= 20 && projectLifespan !== currentCashFlowsLength) {
       const newCashFlows = Array(projectLifespan).fill(null).map((_, i) => {
-        return fields[i] || { value: 25000 }; 
+        return fields[i] || { value: 25000 };
       });
       replace(newCashFlows);
     } else if (projectLifespan === 0 || isNaN(projectLifespan) || projectLifespan > 20) {
         // Don't clear, let validation handle it, or set to a min/max if desired.
         // For now, if invalid, just let existing cashFlows remain until valid lifespan is set.
     }
-  }, [projectLifespan, fields, replace]); 
-  
+  }, [projectLifespan, fields, replace]);
+
 
   function calculateAndSetResults(data: RoiFormValues) {
     const { initialInvestment, discountRate, cashFlows: cfArray } = data;
     const rate = discountRate / 100;
     let npv = -initialInvestment;
     let totalDiscountedCashFlow = 0;
-    let cumulativeCashFlow = -initialInvestment; 
-    let cumulativeDiscountedCfForNpv = -initialInvestment; 
+    let cumulativeCashFlow = -initialInvestment;
+    let cumulativeDiscountedCfForNpv = -initialInvestment;
     let paybackPeriodYears = 0;
     let paybackFound = false;
     let totalNetProfit = -initialInvestment;
@@ -88,35 +89,35 @@ export function RoiCalculator() {
       const cashFlow = cfItem.value;
       totalNetProfit += cashFlow;
       const discountedCf = cashFlow / Math.pow(1 + rate, year);
-      
-      cumulativeDiscountedCfForNpv += discountedCf; 
-      totalDiscountedCashFlow += discountedCf; 
-      
+
+      cumulativeDiscountedCfForNpv += discountedCf;
+      totalDiscountedCashFlow += discountedCf;
+
       yearlyData.push({
         year,
         undiscountedCf: cashFlow,
         discountedCf,
         cumulativeDiscountedCf: cumulativeDiscountedCfForNpv,
       });
-      
+
       if (!paybackFound) {
-        cumulativeCashFlow += cashFlow; 
+        cumulativeCashFlow += cashFlow;
         if (cumulativeCashFlow >= 0) {
           paybackFound = true;
           if (cumulativeCashFlow === 0) {
              paybackPeriodYears = year;
           } else {
             const previousCumulativeCashFlow = cumulativeCashFlow - cashFlow;
-            paybackPeriodYears = (index) + (Math.abs(previousCumulativeCashFlow) / (cashFlow || 1)); 
+            paybackPeriodYears = (index) + (Math.abs(previousCumulativeCashFlow) / (cashFlow || 1));
           }
         }
       }
     });
-    
-    npv = cumulativeDiscountedCfForNpv; 
+
+    npv = cumulativeDiscountedCfForNpv;
 
     const simpleRoi = initialInvestment > 0 ? (totalNetProfit / initialInvestment) * 100 : (totalNetProfit > 0 ? Infinity : 0);
-    
+
     let paybackPeriodDisplay: string;
     if (!paybackFound) {
         paybackPeriodDisplay = `Over ${cfArray.length} years`;
@@ -145,7 +146,7 @@ export function RoiCalculator() {
     calculateAndSetResults(data);
     setIsModalOpen(true);
   }
-  
+
   // Auto-calculate on valid form changes.
   const watchedFormValues = form.watch();
   useEffect(() => {
@@ -206,7 +207,7 @@ export function RoiCalculator() {
                                 const newCashFlowsArray = Array(newLifespan).fill(null).map((_,i) => currentCashFlows[i] || {value: 25000});
                                 replace(newCashFlowsArray);
                             } else if (newLifespan === 0 || isNaN(newLifespan)) {
-                                replace([]); 
+                                replace([]);
                             }
                         }} />
                         </FormControl>
@@ -229,7 +230,7 @@ export function RoiCalculator() {
                   )}
                 />
               </div>
-              
+
               <div>
                 <Label className="text-md font-semibold mb-2.5 block">Expected Annual Net Cash Flows ($)</Label>
                 <div className="space-y-2.5 max-h-52 overflow-y-auto pr-1.5"> {/* Adjusted spacing, height, padding */}
@@ -289,7 +290,8 @@ export function RoiCalculator() {
 
       {results && (
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="sm:max-w-xl md:max-w-2xl lg:max-w-3xl max-h-[85vh] flex flex-col p-0"> {/* Adjusted size, no padding on content itself */}
+          {/* Adjusted max-width and padding for better presentation */}
+          <DialogContent className="sm:max-w-xl md:max-w-2xl lg:max-w-3xl max-h-[90vh] flex flex-col p-0">
             <DialogHeader className="px-5 pt-4 pb-3 border-b"> {/* Consistent padding */}
               <DialogTitle className="text-lg flex items-center"> {/* Adjusted size */}
                 <ReceiptText className="mr-2.5 h-5 w-5 text-primary"/>ROI Calculation Results
@@ -298,69 +300,61 @@ export function RoiCalculator() {
                 Summary of your project's financial viability based on the provided inputs.
               </DialogDescription>
             </DialogHeader>
-            
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 py-4 px-5 flex-grow overflow-y-auto"> {/* Adjusted gap and padding */}
-              <div className="md:col-span-2 space-y-3"> {/* Adjusted spacing */}
+
+            {/* Use Grid for better layout control */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 py-4 px-5 flex-grow overflow-y-auto">
+              <div className="lg:col-span-2 space-y-4"> {/* Adjusted spacing */}
                 <Card className="bg-secondary/30 shadow-none border-border/70"> {/* Subtle card */}
                   <CardHeader className='pb-1.5 pt-3 px-3'>
                     <CardTitle className='text-sm font-semibold'>Key Metrics</CardTitle>
                   </CardHeader>
                   <CardContent className="px-3 pb-3 space-y-2 text-xs"> {/* Compact content */}
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Net Present Value (NPV):</span>
-                      <span className={cn("text-md font-semibold", results.npv >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")}>
+                     {/* Use grid for better alignment of metric labels and values */}
+                    <div className="grid grid-cols-2 gap-x-2">
+                      <span className="text-muted-foreground text-right">NPV:</span>
+                      <span className={cn("font-semibold", results.npv >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")}>
                         {formatCurrency(results.npv)}
                       </span>
-                    </div>
-                    <Separator className="my-1"/> {/* Reduced margin */}
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Simple ROI:</span>
-                      <span className={cn("text-md font-semibold", results.simpleRoi >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")}>
-                        {isFinite(results.simpleRoi) ? `${results.simpleRoi.toFixed(2)}%` : "N/A (No Investment)"}
+                      <span className="text-muted-foreground text-right">Simple ROI:</span>
+                      <span className={cn("font-semibold", results.simpleRoi >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")}>
+                        {isFinite(results.simpleRoi) ? `${results.simpleRoi.toFixed(2)}%` : "N/A"}
                       </span>
-                    </div>
-                    <Separator className="my-1"/>
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Simple Payback Period:</span>
-                      <span className="text-md font-semibold text-foreground">{results.paybackPeriod}</span>
-                    </div>
-                    <Separator className="my-1"/>
-                     <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Total Net Profit (Undisc.):</span>
-                      <span className="text-md font-semibold text-foreground">{formatCurrency(results.totalNetProfit, 0)}</span>
-                    </div>
-                    <Separator className="my-1"/>
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Total Discounted CF:</span>
-                      <span className="text-md font-semibold text-foreground">{formatCurrency(results.totalDiscountedCashFlow, 0)}</span>
+                       <span className="text-muted-foreground text-right">Payback Period:</span>
+                      <span className="font-semibold text-foreground">{results.paybackPeriod}</span>
+                       <span className="text-muted-foreground text-right">Total Net Profit:</span>
+                      <span className="font-semibold text-foreground">{formatCurrency(results.totalNetProfit, 0)}</span>
+                       <span className="text-muted-foreground text-right">Total Discounted CF:</span>
+                      <span className="font-semibold text-foreground">{formatCurrency(results.totalDiscountedCashFlow, 0)}</span>
                     </div>
                   </CardContent>
                 </Card>
-                 <AlertDescription className="text-xs text-muted-foreground p-2.5 border rounded-md bg-background">
-                    <strong>NPV:</strong> Positive suggests worthwhile investment.
-                    <br/>
-                    <strong>Simple ROI:</strong> Basic profitability, ignores time value.
-                    <br/>
-                    <strong>Payback:</strong> Time to recoup initial investment (undiscounted).
-                </AlertDescription>
+                 <Alert variant="default" className="bg-blue-50 border-blue-200 p-2.5 text-blue-700 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-300"> {/* Info alert */}
+                   <Info className="h-4 w-4 !text-blue-500" />
+                   <ShadcnAlertTitle className="text-xs font-semibold">Interpretation</ShadcnAlertTitle>
+                   <AlertDescription className="text-xs leading-snug">
+                       A positive NPV generally indicates a financially viable project. Payback Period shows time to recover the initial cost (undiscounted).
+                   </AlertDescription>
+                </Alert>
               </div>
 
-              <div className="md:col-span-3">
+              <div className="lg:col-span-3">
                  <Card className="h-full flex flex-col shadow-none border-border/70">
                     <CardHeader className="pb-1.5 pt-3 px-3">
                         <CardTitle className="text-sm font-semibold flex items-center"> <BarChart3 className="mr-1.5 h-4 w-4 text-accent"/>Cash Flow Analysis</CardTitle>
                     </CardHeader>
                     <CardContent className="flex-grow px-1 pb-1"> {/* Reduced padding for chart */}
-                        <RoiResultsChart
-                            initialInvestment={form.getValues('initialInvestment')}
-                            yearlyData={results.yearlyData}
-                        />
+                       <div className="h-[300px] sm:h-[350px] w-full"> {/* Explicit height */}
+                            <RoiResultsChart
+                                initialInvestment={form.getValues('initialInvestment')}
+                                yearlyData={results.yearlyData}
+                            />
+                       </div>
                     </CardContent>
                  </Card>
               </div>
             </div>
 
-            <DialogFooter className="px-5 pt-3 pb-4 border-t">
+            <DialogFooter className="px-5 pt-3 pb-4 border-t bg-background"> {/* Added background */}
               <Button variant="outline" onClick={() => setIsModalOpen(false)} size="sm" className="h-9 text-xs">Close</Button>
             </DialogFooter>
           </DialogContent>

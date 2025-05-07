@@ -36,6 +36,7 @@ import {
   UserCheck,
   FileType,
   Banknote, // Added Banknote icon
+  DownloadCloud, // Added DownloadCloud icon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parseISO, differenceInDays } from 'date-fns';
@@ -47,6 +48,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
+// Use status styles from report definitions for consistency
+import { statusStyles as reportStatusStyles, priorityColors as reportPriorityColors } from '@/app/reports/report-style-definitions';
 
 const statusIcons: Record<ProjectStatus, React.ElementType> = {
   'On Track': TrendingUp,
@@ -56,19 +59,10 @@ const statusIcons: Record<ProjectStatus, React.ElementType> = {
   'Planning': Activity,
 };
 
-const statusColors: Record<ProjectStatus, string> = {
-  'On Track': 'bg-green-500 text-white',
-  'At Risk': 'bg-red-500 text-white',
-  'Delayed': 'bg-yellow-500 text-black',
-  'Completed': 'bg-blue-500 text-white',
-  'Planning': 'bg-gray-500 text-white',
-};
+// Merge report styles with specific styles if needed, or just use report styles
+const statusStyles = reportStatusStyles;
+const priorityColors = reportPriorityColors;
 
-const priorityColors: Record<Project['priority'], string> = {
-  High: 'border-red-600 text-red-700 dark:text-red-500 bg-red-50 dark:bg-red-900/30',
-  Medium: 'border-yellow-600 text-yellow-700 dark:text-yellow-500 bg-yellow-50 dark:bg-yellow-900/30',
-  Low: 'border-green-600 text-green-700 dark:text-green-500 bg-green-50 dark:bg-green-900/30',
-};
 
 const milestoneStatusColors: Record<KeyMilestone['status'], string> = {
   'Pending': 'bg-gray-400 dark:bg-gray-600',
@@ -179,6 +173,8 @@ export default function ProjectDetailPage() {
   }
 
   const StatusIcon = statusIcons[project.status] || Activity;
+  const currentStatusStyles = statusStyles[project.status] || statusStyles['Planning']; // Use imported styles
+
   const formatDate = (dateString: string) => {
     try {
       return format(parseISO(dateString), 'MMM dd, yyyy');
@@ -189,27 +185,27 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="flex items-center justify-between mb-8">
-        <Button variant="outline" onClick={() => router.back()} size="sm">
-          <ChevronLeft className="mr-2 h-4 w-4" />
+      <div className="flex items-center justify-between mb-6"> {/* Reduced margin */}
+        <Button variant="outline" onClick={() => router.back()} size="sm" className="h-9 text-xs"> {/* Adjusted size */}
+          <ChevronLeft className="mr-1.5 h-4 w-4" /> {/* Adjusted size */}
           Back
         </Button>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="outline" size="sm" asChild className="h-9 text-xs">
             <Link href={`/projects/${projectId}/discussions`}>
-              <MessageSquare className="mr-2 h-4 w-4" /> Discussions
+              <MessageSquare className="mr-1.5 h-4 w-4" /> Discussions
             </Link>
           </Button>
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="default" size="sm">
-                <Edit3 className="mr-2 h-4 w-4" /> Edit & Re-assess Risk
+              <Button variant="default" size="sm" className="h-9 text-xs">
+                <Edit3 className="mr-1.5 h-4 w-4" /> Edit & Re-assess Risk
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-3xl md:max-w-4xl max-h-[90vh] overflow-y-auto p-6">
               <DialogHeader className="mb-4">
-                <DialogTitle className="text-2xl">Edit Project: {project.name}</DialogTitle>
-                <DialogDescription>
+                <DialogTitle className="text-xl">Edit Project: {project.name}</DialogTitle> {/* Adjusted size */}
+                <DialogDescription className="text-xs"> {/* Adjusted size */}
                   Make changes to the project details. Saving will also trigger an AI risk re-assessment.
                 </DialogDescription>
               </DialogHeader>
@@ -223,65 +219,65 @@ export default function ProjectDetailPage() {
         </div>
       </div>
 
-      <Card className="mb-8 shadow-lg">
-        <CardHeader className="pb-6">
+      <Card className="mb-6 shadow-lg"> {/* Reduced margin */}
+        <CardHeader className="pb-4 pt-5 px-5"> {/* Adjusted padding */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-            <CardTitle className="text-3xl font-bold text-primary">{project.name}</CardTitle>
-            <Badge className={cn('text-base font-semibold px-4 py-2 shrink-0', statusColors[project.status])}>
-              <StatusIcon className="mr-2 h-5 w-5" />
+            <CardTitle className="text-2xl font-semibold text-primary">{project.name}</CardTitle> {/* Adjusted size */}
+            <Badge className={cn('text-sm font-semibold px-3 py-1 shrink-0', currentStatusStyles.badge)} variant="outline"> {/* Use consistent badge style */}
+              <StatusIcon className="mr-1.5 h-4 w-4" /> {/* Adjusted size */}
               {project.status}
             </Badge>
           </div>
-          <CardDescription className="text-md pt-3">{project.description}</CardDescription>
+          <CardDescription className="text-sm pt-2">{project.description}</CardDescription> {/* Adjusted size */}
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
+        <CardContent className="space-y-5 px-5"> {/* Adjusted spacing and padding */}
+          <div className="space-y-3"> {/* Reduced spacing */}
             <div>
-              <div className="mb-1.5 flex justify-between text-sm text-muted-foreground">
+              <div className="mb-1 flex justify-between text-xs text-muted-foreground"> {/* Adjusted size */}
                 <span>Task Completion</span>
                 <span className="font-medium text-foreground">{project.completionPercentage}%</span>
               </div>
-              <Progress value={project.completionPercentage} aria-label={`${project.completionPercentage}% complete`} className="h-3" />
+              <Progress value={project.completionPercentage} aria-label={`${project.completionPercentage}% complete`} className="h-2" indicatorClassName={currentStatusStyles.progress}/> {/* Adjusted height */}
             </div>
             <div>
-              <div className="mb-1.5 flex justify-between text-sm text-muted-foreground">
+              <div className="mb-1 flex justify-between text-xs text-muted-foreground">
                 <span>Timeline Progress</span>
                 {clientCalculatedMetrics ? (
                   <span className={cn("font-medium", clientCalculatedMetrics.daysRemaining < 0 && project.status !== 'Completed' ? "text-destructive" : "text-foreground")}>
                     {clientCalculatedMetrics.daysRemaining >=0 ? `${clientCalculatedMetrics.daysRemaining} days remaining` : `${Math.abs(clientCalculatedMetrics.daysRemaining)} days overdue`}
                   </span>
                 ) : (
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" /> // Smaller loader
                 )}
               </div>
               {clientCalculatedMetrics ? (
-                <Progress value={clientCalculatedMetrics.timelineProgress} aria-label={`Timeline ${clientCalculatedMetrics.timelineProgress}% complete`} className="h-3" indicatorClassName={clientCalculatedMetrics.daysRemaining < 0 && project.status !== 'Completed' ? 'bg-destructive' : ''} />
+                <Progress value={clientCalculatedMetrics.timelineProgress} aria-label={`Timeline ${clientCalculatedMetrics.timelineProgress}% complete`} className="h-2" indicatorClassName={clientCalculatedMetrics.daysRemaining < 0 && project.status !== 'Completed' ? 'bg-destructive' : currentStatusStyles.progress} />
               ) : (
-                <Progress value={0} aria-label="Loading timeline progress" className="h-3" />
+                <Progress value={0} aria-label="Loading timeline progress" className="h-2" />
               )}
             </div>
           </div>
-          
+
           {project.assignedUsers && project.assignedUsers.length > 0 && (
-            <div className="p-4 bg-secondary/40 rounded-lg shadow-sm">
-               <h3 className="text-lg font-semibold mb-3 flex items-center">
-                <Users className="h-5 w-5 mr-2 text-accent" />
+            <div className="p-3 bg-secondary/40 rounded-lg shadow-xs"> {/* Reduced padding */}
+               <h3 className="text-sm font-semibold mb-2 flex items-center"> {/* Adjusted size */}
+                <Users className="h-4 w-4 mr-1.5 text-accent" /> {/* Adjusted size */}
                 Assigned Team
               </h3>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-2"> {/* Reduced gap */}
                 {project.assignedUsers.map(username => (
                   <TooltipProvider key={username}>
                     <Tooltip>
                       <TooltipTrigger>
-                        <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
-                          <AvatarImage src={`https://picsum.photos/seed/${username.replace(/\s+/g, '')}/100`} alt={username} data-ai-hint="user avatar"/>
-                          <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                        <Avatar className="h-8 w-8 border-2 border-background shadow-sm"> {/* Smaller avatar */}
+                          <AvatarImage src={`https://picsum.photos/seed/${username.replace(/\s+/g, '')}/80`} alt={username} data-ai-hint="user avatar"/>
+                          <AvatarFallback className="text-[10px] bg-primary text-primary-foreground"> {/* Smaller fallback */}
                             {username.split(' ').map(n => n[0]).join('').toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>{username}</p>
+                        <p className="text-xs">{username}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -291,18 +287,18 @@ export default function ProjectDetailPage() {
           )}
 
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs"> {/* Reduced gap and text size */}
             {[
               { icon: CalendarDays, label: "Timeline", content: `Start: ${formatDate(project.startDate)} | End: ${formatDate(project.endDate)}` },
               { icon: UserCheck, label: "Lead & Portfolio", content: `Lead: ${project.teamLead} | Portfolio: ${project.portfolio}` },
               { icon: DollarSign, label: "Financials", content: `Budget: $${project.budget.toLocaleString()} | Spent: $${project.spent.toLocaleString()}`, subContent: project.spent > project.budget ? `Over budget by $${(project.spent - project.budget).toLocaleString()}` : `Remaining: $${(project.budget - project.spent).toLocaleString()}`, subContentColor: project.spent > project.budget ? "text-destructive" : "text-green-600 dark:text-green-400" },
-              { icon: Flag, label: "Priority", contentComponent: <Badge variant="outline" className={cn("text-sm px-2.5 py-1", priorityColors[project.priority])}>{project.priority}</Badge> },
-              { icon: ListChecks, label: "Overall Status", content: project.status, className: "md:col-span-2 lg:col-span-1" },
+              { icon: Flag, label: "Priority", contentComponent: <Badge variant="outline" className={cn("text-xs px-2 py-0.5", priorityColors[project.priority])}>{project.priority}</Badge> }, // Adjusted padding/size
+              { icon: ListChecks, label: "Overall Status", contentComponent: <Badge variant="outline" className={cn('text-xs font-semibold px-2 py-0.5', currentStatusStyles.badge)}><StatusIcon className="mr-1 h-3 w-3" />{project.status}</Badge>, className: "md:col-span-2 lg:col-span-1" }, // Use badge for status
             ].map((item, idx) => (
-              <div key={idx} className={cn("flex items-start space-x-3 p-4 bg-secondary/40 rounded-lg shadow-sm", item.className)}>
-                <item.icon className="h-5 w-5 text-accent flex-shrink-0 mt-0.5" />
+              <div key={idx} className={cn("flex items-start space-x-2.5 p-3 bg-secondary/40 rounded-lg shadow-xs", item.className)}> {/* Reduced padding/spacing */}
+                <item.icon className="h-4 w-4 text-accent flex-shrink-0 mt-px" /> {/* Adjusted size */}
                 <div>
-                  <p className="font-semibold text-foreground">{item.label}</p>
+                  <p className="font-semibold text-foreground text-sm">{item.label}</p> {/* Adjusted size */}
                   {item.content && <p className="text-muted-foreground">{item.content}</p>}
                   {item.contentComponent}
                   {item.subContent && <p className={cn("text-xs mt-0.5", item.subContentColor)}>{item.subContent}</p>}
@@ -311,105 +307,105 @@ export default function ProjectDetailPage() {
             ))}
           </div>
         </CardContent>
-        <CardFooter className="text-xs text-muted-foreground pt-4 border-t">
+        <CardFooter className="text-xs text-muted-foreground pt-3 pb-4 px-5 border-t"> {/* Adjusted padding */}
           Last updated: {formatDate(project.lastUpdated)}
         </CardFooter>
       </Card>
 
       {project.riskAssessment && (
-        <Card className="mb-8 shadow-lg">
-          <CardHeader className="pb-4">
+        <Card className="mb-6 shadow-lg"> {/* Consistent margin */}
+          <CardHeader className="pb-3 pt-4 px-5"> {/* Consistent padding */}
             <div className="flex items-center">
-              <ShieldAlert className="h-7 w-7 mr-3 text-primary" />
-              <CardTitle className="text-2xl">AI Risk Assessment</CardTitle>
+              <ShieldAlert className="h-6 w-6 mr-2 text-primary" /> {/* Adjusted size */}
+              <CardTitle className="text-xl">AI Risk Assessment</CardTitle> {/* Adjusted size */}
             </div>
-            <CardDescription>Summary of the latest AI-powered risk analysis for this project.</CardDescription>
+            <CardDescription className="text-xs">Summary of the latest AI-powered risk analysis for this project.</CardDescription> {/* Adjusted size */}
           </CardHeader>
-          <CardContent className="space-y-6 pt-2">
+          <CardContent className="space-y-4 pt-2 px-5 pb-5"> {/* Adjusted spacing/padding */}
             <div>
-              <h3 className="text-lg font-semibold mb-2 flex items-center">
-                <Activity className="h-5 w-5 mr-2 text-accent" />
+              <h3 className="text-sm font-semibold mb-1.5 flex items-center"> {/* Adjusted size */}
+                <Activity className="h-4 w-4 mr-1.5 text-accent" /> {/* Adjusted size */}
                 Overall Risk Score:
-                <span className={cn("ml-2 px-2 py-0.5 rounded text-sm text-white", getRiskScoreColor(project.riskAssessment.overallRiskScore))}>
+                <span className={cn("ml-1.5 px-1.5 py-0.5 rounded text-[11px] text-white", getRiskScoreColor(project.riskAssessment.overallRiskScore))}> {/* Adjusted size */}
                    {project.riskAssessment.overallRiskScore} / 100
                 </span>
               </h3>
               <Progress
                 value={project.riskAssessment.overallRiskScore}
-                className="h-3"
+                className="h-2" // Adjusted height
                 indicatorClassName={getRiskScoreColor(project.riskAssessment.overallRiskScore)}
                 aria-label={`Overall risk score: ${project.riskAssessment.overallRiskScore} out of 100`}
               />
-              <p className="text-sm text-muted-foreground mt-1.5">
+              <p className="text-xs text-muted-foreground mt-1"> {/* Adjusted size */}
                 Interpretation: {project.riskAssessment.overallRiskScore <= 33 ? "Low Risk" : project.riskAssessment.overallRiskScore <= 66 ? "Medium Risk" : "High Risk"}
               </p>
             </div>
 
-            <div className="p-4 bg-secondary/40 rounded-lg shadow-sm">
-              <h3 className="text-lg font-semibold mb-2 flex items-center">
-                <ListChecks className="h-5 w-5 mr-2 text-accent" />
+            <div className="p-3 bg-secondary/40 rounded-lg shadow-xs"> {/* Reduced padding */}
+              <h3 className="text-sm font-semibold mb-1.5 flex items-center"> {/* Adjusted size */}
+                <ListChecks className="h-4 w-4 mr-1.5 text-accent" />
                 Identified Risks
               </h3>
               {project.riskAssessment.identifiedRisks.length > 0 ? (
-                <ul className="list-disc list-inside space-y-1.5 pl-2">
+                <ul className="list-disc list-inside space-y-1 pl-1"> {/* Reduced spacing */}
                   {project.riskAssessment.identifiedRisks.map((risk, index) => (
-                    <li key={`risk-${index}`} className="text-sm text-foreground">{risk}</li>
+                    <li key={`risk-${index}`} className="text-xs text-foreground">{risk}</li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground">No specific risks identified by the AI.</p>
+                <p className="text-xs text-muted-foreground">No specific risks identified by the AI.</p>
               )}
             </div>
 
-            <div className="p-4 bg-secondary/40 rounded-lg shadow-sm">
-              <h3 className="text-lg font-semibold mb-2 flex items-center">
-                <Lightbulb className="h-5 w-5 mr-2 text-accent" />
+            <div className="p-3 bg-secondary/40 rounded-lg shadow-xs">
+              <h3 className="text-sm font-semibold mb-1.5 flex items-center">
+                <Lightbulb className="h-4 w-4 mr-1.5 text-accent" />
                 Mitigation Recommendations
               </h3>
               {project.riskAssessment.riskMitigationRecommendations.length > 0 ? (
-                <ul className="list-disc list-inside space-y-1.5 pl-2">
+                <ul className="list-disc list-inside space-y-1 pl-1">
                   {project.riskAssessment.riskMitigationRecommendations.map((rec, index) => (
-                    <li key={`rec-${index}`} className="text-sm text-foreground">{rec}</li>
+                    <li key={`rec-${index}`} className="text-xs text-foreground">{rec}</li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground">No specific mitigation recommendations provided by the AI.</p>
+                <p className="text-xs text-muted-foreground">No specific mitigation recommendations provided by the AI.</p>
               )}
             </div>
           </CardContent>
         </Card>
       )}
 
-      <Card className="mb-8 shadow-lg">
-        <CardHeader className="pb-4">
+      <Card className="mb-6 shadow-lg">
+        <CardHeader className="pb-3 pt-4 px-5">
             <div className="flex items-center">
-              <Banknote className="h-7 w-7 mr-3 text-primary" />
-              <CardTitle className="text-2xl">Financial Health</CardTitle>
+              <Banknote className="h-6 w-6 mr-2 text-primary" />
+              <CardTitle className="text-xl">Financial Health</CardTitle>
             </div>
-            <CardDescription>Overview of the project&apos;s budget and expenditure.</CardDescription>
+            <CardDescription className="text-xs">Overview of the project&apos;s budget and expenditure.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6 pt-2">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-secondary/40 rounded-lg shadow-sm text-center md:text-left">
-                <p className="text-sm text-muted-foreground">Total Budget</p>
-                <p className="text-2xl font-semibold text-foreground">${project.budget.toLocaleString()}</p>
+          <CardContent className="space-y-4 pt-2 px-5 pb-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3"> {/* Reduced gap */}
+              <div className="p-3 bg-secondary/40 rounded-lg shadow-xs text-center md:text-left"> {/* Reduced padding */}
+                <p className="text-xs text-muted-foreground">Total Budget</p>
+                <p className="text-xl font-semibold text-foreground">${project.budget.toLocaleString()}</p> {/* Adjusted size */}
               </div>
-              <div className="p-4 bg-secondary/40 rounded-lg shadow-sm text-center md:text-left">
-                <p className="text-sm text-muted-foreground">Amount Spent</p>
-                <p className="text-2xl font-semibold text-foreground">${project.spent.toLocaleString()}</p>
+              <div className="p-3 bg-secondary/40 rounded-lg shadow-xs text-center md:text-left">
+                <p className="text-xs text-muted-foreground">Amount Spent</p>
+                <p className="text-xl font-semibold text-foreground">${project.spent.toLocaleString()}</p>
               </div>
               <div className={cn(
-                  "p-4 rounded-lg shadow-sm text-center md:text-left",
+                  "p-3 rounded-lg shadow-xs text-center md:text-left",
                   project.budget - project.spent < 0 ? 'bg-red-100 dark:bg-red-900/30' : 'bg-green-100 dark:bg-green-900/30'
                 )}>
                 <p className={cn(
-                    "text-sm",
+                    "text-xs",
                     project.budget - project.spent < 0 ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'
                   )}>
                   {project.budget - project.spent >= 0 ? 'Remaining Budget' : 'Budget Deficit'}
                 </p>
                 <p className={cn(
-                    "text-2xl font-semibold",
+                    "text-xl font-semibold",
                      project.budget - project.spent < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
                   )}>
                   ${Math.abs(project.budget - project.spent).toLocaleString()}
@@ -417,20 +413,20 @@ export default function ProjectDetailPage() {
               </div>
             </div>
             <div>
-              <div className="mb-1.5 flex justify-between text-sm text-muted-foreground">
+              <div className="mb-1 flex justify-between text-xs text-muted-foreground">
                 <span>Budget Utilization</span>
                 <span className="font-medium text-foreground">
                   {project.budget > 0 ? ((project.spent / project.budget) * 100).toFixed(1) : 0}%
                 </span>
               </div>
-              <Progress 
-                value={project.budget > 0 ? (project.spent / project.budget) * 100 : 0} 
-                className="h-3"
+              <Progress
+                value={project.budget > 0 ? (project.spent / project.budget) * 100 : 0}
+                className="h-2" // Adjusted height
                 indicatorClassName={project.spent > project.budget ? 'bg-destructive' : ((project.spent / project.budget) * 100) > 85 ? 'bg-yellow-500' : 'bg-primary'}
                 aria-label="Budget utilization"
               />
               {project.spent > project.budget && project.budget > 0 && (
-                <p className="text-xs text-destructive mt-1.5">
+                <p className="text-xs text-destructive mt-1">
                   Over budget by {(((project.spent - project.budget) / project.budget) * 100).toFixed(1)}%
                   (${(project.spent - project.budget).toLocaleString()})
                 </p>
@@ -440,42 +436,43 @@ export default function ProjectDetailPage() {
       </Card>
 
 
-      <Card className="mb-8 shadow-lg">
-        <CardHeader className="pb-4">
+      <Card className="mb-6 shadow-lg">
+        <CardHeader className="pb-3 pt-4 px-5">
             <div className="flex items-center">
-                 <ListChecks className="h-7 w-7 mr-3 text-primary" />
-                <CardTitle className="text-2xl">Key Milestones</CardTitle>
+                 <ListChecks className="h-6 w-6 mr-2 text-primary" />
+                <CardTitle className="text-xl">Key Milestones</CardTitle>
             </div>
-          <CardDescription>Track the progress of important project milestones.</CardDescription>
+          <CardDescription className="text-xs">Track the progress of important project milestones.</CardDescription>
         </CardHeader>
-        <CardContent className="pt-2">
+        <CardContent className="pt-2 px-5 pb-5">
           {project.keyMilestones.length > 0 ? (
-            <ul className="space-y-4">
+            <ul className="space-y-3"> {/* Reduced spacing */}
               {project.keyMilestones.map((milestone) => {
                 const MilestoneStatusIcon = milestoneStatusIcons[milestone.status];
                 return (
-                  <li key={milestone.id} className="flex items-start sm:items-center space-x-4 p-4 border rounded-lg shadow-sm hover:shadow-md transition-shadow bg-secondary/20">
+                  <li key={milestone.id} className="flex items-center space-x-3 p-3 border rounded-lg shadow-xs bg-secondary/20 hover:bg-muted/30 transition-colors"> {/* Reduced padding */}
                      <Badge
+                      variant="outline" // Changed variant
                       className={cn(
-                        'px-2.5 py-1 text-xs font-semibold text-white shrink-0 flex items-center gap-1.5',
-                        milestoneStatusColors[milestone.status]
+                        'px-2 py-0.5 text-xs font-medium flex items-center gap-1 border', // Adjusted padding/size
+                        milestoneStatusColors[milestone.status] // Apply status colors
                       )}
                       aria-label={`Milestone status: ${milestone.status}`}
                     >
-                      <MilestoneStatusIcon className="h-3.5 w-3.5" />
-                       <span>{milestone.status}</span>
+                      <MilestoneStatusIcon className="h-3 w-3" /> {/* Adjusted size */}
+                       <span className="ml-1">{milestone.status}</span>
                     </Badge>
                     <div className="flex-grow">
-                      <p className="font-semibold text-foreground">{milestone.name}</p>
-                      <p className="text-sm text-muted-foreground">Target Date: {formatDate(milestone.date)}</p>
+                      <p className="font-medium text-sm text-foreground">{milestone.name}</p> {/* Adjusted size */}
+                      <p className="text-xs text-muted-foreground">Target: {formatDate(milestone.date)}</p>
                     </div>
                     {milestone.assignedTo && (
                        <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger>
-                            <Avatar className="h-8 w-8 border-2 border-background shadow-sm shrink-0">
-                              <AvatarImage src={`https://picsum.photos/seed/${milestone.assignedTo.replace(/\s+/g, '')}/80`} alt={milestone.assignedTo} data-ai-hint="user avatar" />
-                              <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                            <Avatar className="h-7 w-7 border border-background shadow-sm shrink-0"> {/* Adjusted size */}
+                              <AvatarImage src={`https://picsum.photos/seed/${milestone.assignedTo.replace(/\s+/g, '')}/60`} alt={milestone.assignedTo} data-ai-hint="user avatar" />
+                              <AvatarFallback className="text-[10px] bg-primary text-primary-foreground"> {/* Smaller fallback */}
                                 {milestone.assignedTo.split(' ').map(n => n[0]).join('').toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
@@ -491,75 +488,75 @@ export default function ProjectDetailPage() {
               })}
             </ul>
           ) : (
-            <p className="text-muted-foreground text-center py-6">No key milestones defined for this project.</p>
+            <p className="text-muted-foreground text-center py-5 text-sm">No key milestones defined for this project.</p> {/* Adjusted padding/size */}
           )}
         </CardContent>
       </Card>
 
-      <Card className="mb-8 shadow-lg">
-        <CardHeader className="pb-4 flex flex-col sm:flex-row justify-between items-center">
+      <Card className="mb-6 shadow-lg">
+        <CardHeader className="pb-3 pt-4 px-5 flex flex-col sm:flex-row justify-between items-start sm:items-center">
           <div>
             <div className="flex items-center">
-              <Paperclip className="h-7 w-7 mr-3 text-primary" />
-              <CardTitle className="text-2xl">Project Documents</CardTitle>
+              <Paperclip className="h-6 w-6 mr-2 text-primary" />
+              <CardTitle className="text-xl">Project Documents</CardTitle>
             </div>
-            <CardDescription>Shared files and documentation for this project.</CardDescription>
+            <CardDescription className="text-xs mt-1">Shared files and documentation for this project.</CardDescription>
           </div>
-          <Button onClick={handleFileUpload} variant="outline" size="sm">
-            <UploadCloud className="mr-2 h-4 w-4" /> Upload Document
+          <Button onClick={handleFileUpload} variant="outline" size="sm" className="h-9 text-xs mt-2 sm:mt-0"> {/* Adjusted size */}
+            <UploadCloud className="mr-1.5 h-4 w-4" /> Upload Document {/* Adjusted size */}
           </Button>
         </CardHeader>
-        <CardContent className="pt-2">
+        <CardContent className="pt-2 px-5 pb-5">
           {documents.length > 0 ? (
-            <ul className="space-y-3">
+            <ul className="space-y-2.5"> {/* Reduced spacing */}
               {documents.map((doc) => (
-                <li key={doc.id} className="flex items-center justify-between p-3 border rounded-lg shadow-sm hover:bg-muted/30 transition-colors">
-                  <div className="flex items-center space-x-3">
-                    <FileType className="h-6 w-6 text-accent" />
-                    <div>
-                      <a href={doc.url} download={doc.name} className="font-medium text-foreground hover:underline hover:text-primary transition-colors">{doc.name}</a>
-                      <p className="text-xs text-muted-foreground">
+                <li key={doc.id} className="flex items-center justify-between p-2.5 border rounded-lg shadow-xs hover:bg-muted/30 transition-colors"> {/* Reduced padding */}
+                  <div className="flex items-center space-x-2.5 overflow-hidden"> {/* Added overflow-hidden */}
+                    <FileType className="h-5 w-5 text-accent flex-shrink-0" /> {/* Adjusted size */}
+                    <div className="overflow-hidden"> {/* Added overflow-hidden */}
+                      <a href={doc.url} download={doc.name} className="font-medium text-sm text-foreground hover:underline hover:text-primary transition-colors truncate block">{doc.name}</a> {/* Truncate */}
+                      <p className="text-xs text-muted-foreground truncate"> {/* Truncate */}
                         {doc.type} - {doc.size} - Uploaded by {doc.uploadedBy} on {formatDate(doc.uploadedAt)}
                       </p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" asChild className="text-muted-foreground hover:text-primary">
+                  <Button variant="ghost" size="icon" asChild className="text-muted-foreground hover:text-primary h-8 w-8"> {/* Adjusted size */}
                     <a href={doc.url} download={doc.name} title={`Download ${doc.name}`}>
-                      <DownloadCloud className="h-5 w-5" />
+                      <DownloadCloud className="h-4 w-4" /> {/* Adjusted size */}
                     </a>
                   </Button>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-muted-foreground text-center py-6">No documents uploaded for this project yet.</p>
+            <p className="text-muted-foreground text-center py-5 text-sm">No documents uploaded for this project yet.</p>
           )}
         </CardContent>
       </Card>
 
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6"> {/* Reduced gap/margin */}
          <Card className="shadow-lg">
-            <CardHeader className="pb-4">
+            <CardHeader className="pb-3 pt-4 px-5">
                 <div className="flex items-center">
-                    <GanttChartSquare className="h-7 w-7 mr-3 text-primary" />
-                    <CardTitle className="text-2xl">Project Timeline</CardTitle>
+                    <GanttChartSquare className="h-6 w-6 mr-2 text-primary" />
+                    <CardTitle className="text-xl">Project Timeline</CardTitle>
                 </div>
-                <CardDescription>Visual representation of the project schedule.</CardDescription>
+                <CardDescription className="text-xs">Visual representation of the project schedule.</CardDescription>
             </CardHeader>
-            <CardContent className="pt-2">
+            <CardContent className="pt-2 px-3 pb-4"> {/* Adjusted padding */}
                 <ProjectTimelineGantt projects={[project]} />
             </CardContent>
         </Card>
         <Card className="shadow-lg">
-            <CardHeader className="pb-4">
+            <CardHeader className="pb-3 pt-4 px-5">
                 <div className="flex items-center">
-                    <PieChartIcon className="h-7 w-7 mr-3 text-primary" />
-                    <CardTitle className="text-2xl">Budget Overview</CardTitle>
+                    <PieChartIcon className="h-6 w-6 mr-2 text-primary" />
+                    <CardTitle className="text-xl">Budget Overview</CardTitle>
                 </div>
-                <CardDescription>Budget allocation and spending for this project.</CardDescription>
+                <CardDescription className="text-xs">Budget allocation and spending for this project.</CardDescription>
             </CardHeader>
-            <CardContent className="pt-2">
+             <CardContent className="pt-2 px-3 pb-4"> {/* Adjusted padding */}
                 <ProjectBudgetChart projects={[project]} />
             </CardContent>
         </Card>
@@ -568,23 +565,5 @@ export default function ProjectDetailPage() {
   );
 }
 
-// Added DownloadCloud icon
-const DownloadCloud = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
-    <path d="M12 12v9" />
-    <path d="m8 17 4 4 4-4" />
-  </svg>
-);
-
+// Added DownloadCloud icon (kept as is)
+// const DownloadCloud = (props: React.SVGProps<SVGSVGElement>) => ( ... );
