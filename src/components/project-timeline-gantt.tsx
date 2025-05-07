@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { Project, KeyMilestone } from '@/types/project';
@@ -27,6 +26,16 @@ const milestoneStatusIcons: Record<KeyMilestone['status'], React.ElementType> = 
   'Completed': CheckCircle,
   'Blocked': AlertCircle,
 };
+
+// Define project status colors for the main bar (track) and progress fill
+const projectBarColors: Record<Project['status'], { track: string; fill: string; text?: string }> = {
+  'On Track': { track: 'bg-primary/30', fill: 'bg-primary' },
+  'At Risk': { track: 'bg-red-500/30', fill: 'bg-red-600' },
+  'Delayed': { track: 'bg-yellow-500/30', fill: 'bg-yellow-500', text: 'text-yellow-800' }, // Darker text for yellow
+  'Completed': { track: 'bg-green-500/30', fill: 'bg-green-600' },
+  'Planning': { track: 'bg-gray-400/30', fill: 'bg-gray-500' },
+};
+
 
 export function ProjectTimelineGantt({ projects }: ProjectTimelineGanttProps) {
   if (!projects.length) {
@@ -61,11 +70,11 @@ export function ProjectTimelineGantt({ projects }: ProjectTimelineGanttProps) {
   let currentDateIterator = overallStartDate;
   const today = new Date();
 
-  while (currentDateIterator <= overallEndDate || monthMarkers.length < 2) { // Ensure at least 2 markers if duration is very short
+  while (currentDateIterator <= overallEndDate || monthMarkers.length < 2) { 
     monthMarkers.push(new Date(currentDateIterator));
-    const daysIncrement = Math.max(1, Math.floor(totalDurationDays / 12)) || 30;
+    const daysIncrement = Math.max(1, Math.floor(totalDurationDays / 12)) || 30; 
     currentDateIterator = addDays(currentDateIterator, daysIncrement);
-    if (monthMarkers.length > 24 && totalDurationDays > 365 * 2) break; // Cap markers for very long durations
+    if (monthMarkers.length > 24 && totalDurationDays > 365 * 2) break; 
   }
    if (monthMarkers.length > 0 && !isSameDay(monthMarkers[monthMarkers.length-1], overallEndDate) && overallEndDate > monthMarkers[monthMarkers.length-1]) {
     monthMarkers.push(overallEndDate);
@@ -81,9 +90,9 @@ export function ProjectTimelineGantt({ projects }: ProjectTimelineGanttProps) {
       <CardContent className="pt-2">
         <TooltipProvider delayDuration={150}>
           <ScrollArea className="w-full h-[500px] whitespace-nowrap border rounded-md bg-secondary/20">
-            <div className="relative py-3 px-2 min-w-max"> {/* Added min-w-max */}
+            <div className="relative py-3 px-2 min-w-max"> 
               {/* Timeline Header with Month Markers */}
-              <div className="sticky top-0 z-10 h-12 bg-background/80 backdrop-blur-sm border-b mb-4 flex items-end"> {/* Increased height, added flex items-end */}
+              <div className="sticky top-0 z-10 h-12 bg-background/80 backdrop-blur-sm border-b mb-4 flex items-end">
                 <div className="relative h-full w-full">
                   {monthMarkers.map((month, index) => {
                     const offsetPercent = (differenceInDays(month, overallStartDate) / totalDurationDays) * 100;
@@ -127,45 +136,58 @@ export function ProjectTimelineGantt({ projects }: ProjectTimelineGanttProps) {
                 
                 const projectOffsetLeft = (differenceInDays(projectStart, overallStartDate) / totalDurationDays) * 100;
                 const projectWidth = (projectDurationDays / totalDurationDays) * 100;
+                const barStyle = projectBarColors[project.status] || projectBarColors['Planning'];
+
 
                 return (
-                  <div key={project.id} className={cn("mb-3", projectIndex > 0 && "mt-1")}>
-                    <h4 className="text-xs font-medium mb-1.5 text-foreground truncate max-w-[200px] sm:max-w-xs md:max-w-sm lg:max-w-md xl:max-w-lg">
+                  <div key={project.id} className={cn("mb-4", projectIndex > 0 && "mt-1")}>
+                    <h4 className="text-sm font-semibold mb-1.5 text-foreground truncate max-w-[200px] sm:max-w-xs md:max-w-sm lg:max-w-md xl:max-w-lg">
                         {project.name}
                     </h4>
-                    <div className="relative h-7 bg-muted rounded-sm overflow-visible"> {/* Increased height, overflow-visible for tooltips */}
+                    <div className="relative h-8 bg-muted rounded-md overflow-hidden group"> {/* Main track for the bar + milestones */}
                        <Tooltip>
                         <TooltipTrigger asChild>
                            <div
                             className={cn(
-                              "absolute h-full rounded-sm transition-all duration-150 ease-in-out", 
-                              project.status === 'Completed' ? 'bg-green-500/80 hover:bg-green-500' :
-                              project.status === 'At Risk' ? 'bg-red-500/80 hover:bg-red-500' :
-                              project.status === 'Delayed' ? 'bg-yellow-500/80 hover:bg-yellow-500 text-black' : // Text black for yellow
-                              project.status === 'Planning' ? 'bg-gray-400/80 hover:bg-gray-400' :
-                              'bg-primary/80 hover:bg-primary' 
+                              "absolute h-full rounded-md transition-all duration-150 ease-in-out", 
+                              barStyle.track
                             )}
                             style={{
                               left: `${Math.max(0, projectOffsetLeft)}%`,
                               width: `${Math.min(100 - Math.max(0, projectOffsetLeft), projectWidth)}%`, 
                             }}
-                          />
+                          >
+                            {/* Progress Fill */}
+                            <div
+                              className={cn(
+                                "absolute top-0 left-0 h-full rounded-l-md",
+                                barStyle.fill,
+                                project.completionPercentage === 100 && "rounded-r-md" // Full rounding if 100%
+                              )}
+                              style={{ width: `${project.completionPercentage}%` }}
+                            />
+                          </div>
                         </TooltipTrigger>
                         <TooltipContent className="bg-popover text-popover-foreground p-2 rounded-md shadow-lg border">
                           <p className="font-semibold text-sm">{project.name}</p>
                           <p className="text-xs">{format(projectStart, 'MMM d, yyyy')} - {format(projectEnd, 'MMM d, yyyy')}</p>
-                          <p className="text-xs">Status: {project.status}</p>
+                          <p className="text-xs">Status: <span className={cn(barStyle.text)}>{project.status}</span></p>
                           <p className="text-xs">Progress: {project.completionPercentage}%</p>
                         </TooltipContent>
                       </Tooltip>
 
-                      {/* Milestones */}
+                      {/* Milestones: Positioned relative to the main track div */}
                       {project.keyMilestones.map((milestone) => {
                         const milestoneDate = parseISO(milestone.date);
+                        // Ensure milestone is within the project's actual duration for correct relative positioning
                         if (milestoneDate < projectStart || milestoneDate > projectEnd) return null;
 
-                        const milestoneOffsetWithinProject = (differenceInDays(milestoneDate, projectStart) / projectDurationDays) * 100;
-                        const clampedMilestoneOffset = Math.max(0, Math.min(100, milestoneOffsetWithinProject));
+                        const milestoneOffsetWithinProjectBar = (differenceInDays(milestoneDate, projectStart) / projectDurationDays) * 100;
+                        // Calculate absolute offset for positioning on the overall timeline track
+                        const absoluteMilestoneOffset = projectOffsetLeft + (milestoneOffsetWithinProjectBar / 100 * projectWidth);
+
+                        const clampedAbsoluteMilestoneOffset = Math.max(0, Math.min(100, absoluteMilestoneOffset));
+                        
                         const MilestoneIcon = milestoneStatusIcons[milestone.status];
 
                         return (
@@ -173,18 +195,20 @@ export function ProjectTimelineGantt({ projects }: ProjectTimelineGanttProps) {
                             <TooltipTrigger asChild>
                               <div
                                 className={cn(
-                                  "absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full flex items-center justify-center shadow-md border-2",
+                                  "absolute top-1/2 -translate-y-1/2 w-[18px] h-[18px] rounded-full flex items-center justify-center shadow-md border-2 cursor-pointer",
+                                  "hover:scale-125 hover:shadow-lg transition-all duration-150 z-20", // Hover effect
                                   milestoneStatusColors[milestone.status]
                                 )}
-                                style={{ left: `${clampedMilestoneOffset}%`, transform: `translateX(-50%) translateY(-50%)` }} 
+                                style={{ left: `${clampedAbsoluteMilestoneOffset}%`, transform: `translateX(-50%) translateY(-50%)` }} 
                               >
-                                <MilestoneIcon className="w-2 h-2 text-white" />
+                                <MilestoneIcon className="w-2.5 h-2.5 text-white" />
                               </div>
                             </TooltipTrigger>
                             <TooltipContent className="bg-popover text-popover-foreground p-2 rounded-md shadow-lg border">
                               <p className="font-semibold text-sm">{milestone.name}</p>
-                              <p className="text-xs">Date: {format(milestoneDate, 'MMM d, yyyy')}</p>
+                              <p className="text-xs">Target: {format(milestoneDate, 'MMM d, yyyy')}</p>
                               <p className="text-xs">Status: {milestone.status}</p>
+                              {milestone.assignedTo && <p className="text-xs">Assigned: {milestone.assignedTo}</p>}
                             </TooltipContent>
                           </Tooltip>
                         );
@@ -200,3 +224,4 @@ export function ProjectTimelineGantt({ projects }: ProjectTimelineGanttProps) {
     </Card>
   );
 }
+
