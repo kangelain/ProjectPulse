@@ -13,14 +13,15 @@ import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { ListChecks, Briefcase, Users, TrendingUp, PieChart, UsersRound, AlertTriangle, Clock, CheckCircle2, Activity, Loader2, FileText } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { ListChecks, Briefcase, Users, TrendingUp, PieChart, UsersRound, AlertTriangle, Clock, CheckCircle2, Activity, Loader2, FileText, Download } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 const statusColors: Record<ProjectStatus, string> = {
   'On Track': 'bg-green-500 text-white',
   'At Risk': 'bg-red-500 text-white',
-  'Delayed': 'bg-yellow-500 text-black', // Ensure contrast for yellow
+  'Delayed': 'bg-yellow-500 text-black', 
   'Completed': 'bg-blue-500 text-white',
   'Planning': 'bg-gray-500 text-white',
 };
@@ -74,7 +75,7 @@ export default function ReportsPage() {
         const startDate = parseISO(project.startDate);
 
         const daysRemainingCalculated = differenceInDays(endDate, now);
-        const isOverdueCalculated = daysRemainingCalculated < 0;
+        const isOverdueCalculated = daysRemainingCalculated < 0 && project.status !== 'Completed';
 
         const totalProjectDuration = differenceInDays(endDate, startDate);
         const daysPassed = Math.max(0, differenceInDays(now, startDate));
@@ -88,7 +89,7 @@ export default function ReportsPage() {
 
 
         metricsData[project.id] = {
-          daysRemaining: Math.abs(daysRemainingCalculated),
+          daysRemaining: daysRemainingCalculated, // Keep it signed
           isOverdue: isOverdueCalculated,
           timelineProgress: timelineProgressCalculated,
         };
@@ -146,9 +147,9 @@ export default function ReportsPage() {
     return Object.values(leads).sort((a,b) => b.projectCount - a.projectCount);
   }, []);
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string, csvFormat = false) => {
     try {
-      return format(parseISO(dateString), 'MMM dd, yyyy');
+      return format(parseISO(dateString), csvFormat ? 'yyyy-MM-dd' : 'MMM dd, yyyy');
     } catch (error) {
       return 'N/A';
     }
@@ -158,13 +159,75 @@ export default function ReportsPage() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
   }
 
+  const escapeCsvValue = (value: any): string => {
+    const stringValue = String(value == null ? '' : value);
+    if (/[",\r\n]/.test(stringValue)) {
+      return `"${stringValue.replace(/"/g, '""')}"`;
+    }
+    return stringValue;
+  };
+
+  const handleDownloadPerformanceCSV = () => {
+    const headers = [
+      "Project Name", "Status", "Priority", "Completion %", 
+      "Budget (USD)", "Spent (USD)", "Variance (USD)", 
+      "Start Date", "End Date", "Days Remaining/Overdue", "Team Lead"
+    ];
+
+    const rows = mockProjects.map(project => {
+      const metrics = projectMetrics[project.id];
+      let daysRemainingDisplay = 'N/A';
+      if (metrics) {
+        if (project.status === 'Completed') {
+          daysRemainingDisplay = 'Completed';
+        } else if (metrics.daysRemaining < 0) {
+          daysRemainingDisplay = `${Math.abs(metrics.daysRemaining)} days overdue`;
+        } else {
+          daysRemainingDisplay = `${metrics.daysRemaining} days remaining`;
+        }
+      }
+      
+      return [
+        escapeCsvValue(project.name),
+        escapeCsvValue(project.status),
+        escapeCsvValue(project.priority),
+        escapeCsvValue(project.completionPercentage),
+        escapeCsvValue(project.budget),
+        escapeCsvValue(project.spent),
+        escapeCsvValue(project.budget - project.spent),
+        escapeCsvValue(formatDate(project.startDate, true)),
+        escapeCsvValue(formatDate(project.endDate, true)),
+        escapeCsvValue(daysRemainingDisplay),
+        escapeCsvValue(project.teamLead),
+      ].join(',');
+    });
+
+    const csvString = [headers.join(','), ...rows].join('\r\n');
+    
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) { 
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", "project_performance_report.csv");
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+  };
+
 
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="flex items-center mb-8">
-        <FileText className="h-8 w-8 mr-3 text-primary" />
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Project Reports</h1>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center">
+          <FileText className="h-8 w-8 mr-3 text-primary" />
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Project Reports</h1>
+        </div>
       </div>
+      
 
       <Tabs defaultValue="performance" className="w-full">
         <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 gap-2 mb-6">
@@ -181,9 +244,15 @@ export default function ReportsPage() {
 
         <TabsContent value="performance" className="mt-6">
           <Card className="shadow-lg">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-2xl">Project Performance Details</CardTitle>
-              <CardDescription>Comprehensive overview of all projects, their status, and key metrics.</CardDescription>
+            <CardHeader className="pb-4 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl">Project Performance Details</CardTitle>
+                <CardDescription>Comprehensive overview of all projects, their status, and key metrics.</CardDescription>
+              </div>
+              <Button onClick={handleDownloadPerformanceCSV} size="sm" variant="outline">
+                <Download className="mr-2 h-4 w-4" />
+                Download CSV
+              </Button>
             </CardHeader>
             <CardContent className="pt-2">
               <ScrollArea className="h-[600px] w-full">
@@ -207,6 +276,19 @@ export default function ReportsPage() {
                     {mockProjects.map(project => {
                       const metrics = projectMetrics[project.id];
                       const StatusIcon = statusIcons[project.status];
+                      let daysRemainingDisplay = <Loader2 className="h-4 w-4 animate-spin text-muted-foreground"/>;
+                      if (!isLoadingMetrics && metrics) {
+                        if (project.status === 'Completed') {
+                          daysRemainingDisplay = <span className="text-green-600 dark:text-green-400 font-medium">Completed</span>;
+                        } else if (metrics.isOverdue) {
+                          daysRemainingDisplay = <span className="text-red-600 dark:text-red-400 font-medium">{Math.abs(metrics.daysRemaining)} days overdue</span>;
+                        } else {
+                          daysRemainingDisplay = <span className="text-muted-foreground">{metrics.daysRemaining} days left</span>;
+                        }
+                      } else if (!isLoadingMetrics) {
+                        daysRemainingDisplay = <span className="text-muted-foreground">N/A</span>;
+                      }
+
                       return (
                         <TableRow key={project.id} className="hover:bg-muted/30">
                           <TableCell className="font-medium text-primary py-3">{project.name}</TableCell>
@@ -235,11 +317,7 @@ export default function ReportsPage() {
                           <TableCell className="py-3 text-muted-foreground">{formatDate(project.startDate)}</TableCell>
                           <TableCell className="py-3 text-muted-foreground">{formatDate(project.endDate)}</TableCell>
                           <TableCell className="py-3">
-                            {isLoadingMetrics ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground"/> : metrics ? (
-                              metrics.isOverdue && project.status !== 'Completed' ? 
-                              <span className="text-red-600 dark:text-red-400 font-medium">{metrics.daysRemaining} days overdue</span> : 
-                              <span className="text-muted-foreground">{metrics.daysRemaining} days left</span>
-                            ) : <span className="text-muted-foreground">N/A</span>}
+                            {daysRemainingDisplay}
                           </TableCell>
                           <TableCell className="py-3 text-muted-foreground">{project.teamLead}</TableCell>
                         </TableRow>
@@ -344,7 +422,7 @@ export default function ReportsPage() {
                                       </Badge>
                                     </Badge>
                                   </TooltipTrigger>
-                                  <TooltipContent className="text-xs p-2 bg-popover shadow-md rounded-md">
+                                  <TooltipContent className="text-xs p-2 bg-popover shadow-md rounded-md border">
                                     <p className="font-semibold">{p.name}</p>
                                     <p className="text-muted-foreground">Status: {p.status}</p>
                                     <p className="text-muted-foreground">Priority: {p.priority}</p>
@@ -375,3 +453,4 @@ export default function ReportsPage() {
     </div>
   );
 }
+
