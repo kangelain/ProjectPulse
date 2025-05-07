@@ -18,11 +18,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DateRangePicker } from '@/components/date-range-picker';
-import { ListChecks, Briefcase, Users, TrendingUp, PieChart, UsersRound, AlertTriangle, Clock, CheckCircle2, Activity, Loader2, FileText, Download, Mail, FileType, Search, Filter as FilterIcon, Check, XCircle, ChevronsUpDown } from 'lucide-react';
+import { ListChecks, Briefcase, Users, TrendingUp, PieChart, UsersRound, AlertTriangle, Clock, CheckCircle2, Activity, Loader2, FileText, Download, Mail, FileType, Search, Filter as FilterIcon, Check, XCircle, ChevronsUpDown, Brain, HelpCircle, LineChart as LineChartIcon, TrendingDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from "@/hooks/use-toast";
+import { predictProjectPerformance, type PredictProjectPerformanceInput, type PredictProjectPerformanceOutput, type PortfolioMetricSummary } from '@/ai/flows/predict-project-performance-flow';
+import { Alert, AlertDescription, AlertTitle as ShadcnAlertTitle } from '@/components/ui/alert';
 
 
 const statusColors: Record<ProjectStatus, string> = {
@@ -75,6 +77,14 @@ interface TeamLeadWorkload {
   projects: Array<{ id: string; name: string; status: ProjectStatus, priority: Project['priority'], completionPercentage: number }>;
 }
 
+interface TrendIndicator {
+  metricName: string;
+  currentValue: string | number;
+  trend: 'Improving' | 'Declining' | 'Stable' | 'N/A';
+  trendDescription: string;
+  historicalComparison?: string; 
+}
+
 const ALL_STATUSES = Object.keys(statusIcons) as ProjectStatus[];
 const ALL_PRIORITIES = ['High', 'Medium', 'Low'] as Project['priority'][];
 
@@ -85,7 +95,6 @@ export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<string>('performance');
   const { toast } = useToast();
 
-  // Filters State
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatuses, setSelectedStatuses] = useState<Set<ProjectStatus>>(new Set());
   const [selectedPriorities, setSelectedPriorities] = useState<Set<Project['priority']>>(new Set());
@@ -96,6 +105,10 @@ export default function ReportsPage() {
   const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
   const [selectedPortfolioForModal, setSelectedPortfolioForModal] = useState<PortfolioSummary | null>(null);
 
+  const [trendsAndPredictions, setTrendsAndPredictions] = useState<PredictProjectPerformanceOutput | null>(null);
+  const [isLoadingTrendsAndPredictions, setIsLoadingTrendsAndPredictions] = useState(false);
+  const [trendsError, setTrendsError] = useState<string | null>(null);
+  const [calculatedTrendIndicators, setCalculatedTrendIndicators] = useState<TrendIndicator[]>([]);
 
   const uniqueTeamLeads = useMemo(() => Array.from(new Set(mockProjects.map(p => p.teamLead))).sort(), []);
   const uniquePortfolios = useMemo(() => Array.from(new Set(mockProjects.map(p => p.portfolio))).sort(), []);
@@ -237,6 +250,95 @@ export default function ReportsPage() {
       averageCompletionPercentage: lead.activeProjectsCount > 0 ? parseFloat((lead.averageCompletionPercentage / lead.activeProjectsCount).toFixed(2)) : 0,
     })).sort((a,b) => b.projectCount - a.projectCount);
   }, [filteredProjects]);
+
+
+   // Calculate basic trend indicators for AI input
+   const calculateTrendIndicators = (projects: Project[]): { completionTrend: 'Improving' | 'Declining' | 'Stable', budgetTrend: 'Improving' | 'Worsening' | 'Stable' } => {
+    if (projects.length < 5) return { completionTrend: 'Stable', budgetTrend: 'Stable' }; // Not enough data for meaningful trend
+
+    const sortedByStartDate = [...projects].sort((a, b) => parseISO(a.startDate).getTime() - parseISO(b.startDate).getTime());
+    const olderProjects = sortedByStartDate.slice(0, Math.floor(sortedByStartDate.length / 2));
+    const newerProjects = sortedByStartDate.slice(Math.ceil(sortedByStartDate.length / 2));
+
+    const avgCompletionOlder = olderProjects.reduce((sum, p) => sum + p.completionPercentage, 0) / (olderProjects.length || 1);
+    const avgCompletionNewer = newerProjects.reduce((sum, p) => sum + p.completionPercentage, 0) / (newerProjects.length || 1);
+
+    const budgetRatio = (p: Project) => p.budget > 0 ? p.spent / p.budget : 1; // 1 means on budget
+    const avgBudgetRatioOlder = olderProjects.reduce((sum, p) => sum + budgetRatio(p), 0) / (olderProjects.length || 1);
+    const avgBudgetRatioNewer = newerProjects.reduce((sum, p) => sum + budgetRatio(p), 0) / (newerProjects.length || 1);
+    
+    let completionTrend: 'Improving' | 'Declining' | 'Stable' = 'Stable';
+    if (avgCompletionNewer > avgCompletionOlder * 1.05) completionTrend = 'Improving';
+    else if (avgCompletionNewer < avgCompletionOlder * 0.95) completionTrend = 'Declining';
+
+    let budgetTrend: 'Improving' | 'Worsening' | 'Stable' = 'Stable';
+    if (avgBudgetRatioNewer < avgBudgetRatioOlder * 0.95) budgetTrend = 'Improving'; // Lower ratio is better
+    else if (avgBudgetRatioNewer > avgBudgetRatioOlder * 1.05) budgetTrend = 'Worsening';
+
+    setCalculatedTrendIndicators([
+        { metricName: 'Overall Completion', currentValue: `${avgCompletionNewer.toFixed(1)}%`, trend: completionTrend, trendDescription: `Completion: ${completionTrend}`, historicalComparison: `Older: ${avgCompletionOlder.toFixed(1)}%` },
+        { metricName: 'Overall Budget Adherence', currentValue: `${avgBudgetRatioNewer.toFixed(2)} ratio`, trend: budgetTrend, trendDescription: `Budget: ${budgetTrend}`, historicalComparison: `Older: ${avgBudgetRatioOlder.toFixed(2)} ratio` },
+    ]);
+
+    return { completionTrend, budgetTrend };
+  };
+
+  const fetchTrendsAndPredictions = async () => {
+    if (filteredProjects.length === 0) {
+      setTrendsAndPredictions(null);
+      setTrendsError("No project data to analyze for predictions.");
+      setCalculatedTrendIndicators([]);
+      return;
+    }
+    setIsLoadingTrendsAndPredictions(true);
+    setTrendsError(null);
+    try {
+      const overallAvgCompletion = filteredProjects.reduce((sum, p) => sum + p.completionPercentage, 0) / filteredProjects.length;
+      const totalBudget = filteredProjects.reduce((sum, p) => sum + p.budget, 0);
+      const totalSpent = filteredProjects.reduce((sum, p) => sum + p.spent, 0);
+      const overallBudgetVarRatio = totalBudget > 0 ? totalSpent / totalBudget : 1;
+      
+      const aiPortfolioSummaries: PortfolioMetricSummary[] = portfolioSummaries
+        .sort((a,b) => b.totalProjects - a.totalProjects) // Top portfolios by project count
+        .slice(0, 5)
+        .map(ps => ({
+            portfolioName: ps.portfolioName,
+            totalProjects: ps.totalProjects,
+            averageCompletion: ps.averageCompletion,
+            budgetVarianceRatio: ps.totalBudget > 0 ? ps.totalSpent / ps.totalBudget : 1,
+            onTrackProjects: ps.statusCounts['On Track'] || 0,
+            atRiskProjects: ps.statusCounts['At Risk'] || 0,
+            delayedProjects: ps.statusCounts['Delayed'] || 0,
+      }));
+
+      const recentTrendIndicators = calculateTrendIndicators(filteredProjects);
+
+      const input: PredictProjectPerformanceInput = {
+        overallAverageCompletion: parseFloat(overallAvgCompletion.toFixed(2)),
+        overallBudgetVarianceRatio: parseFloat(overallBudgetVarRatio.toFixed(2)),
+        portfolioSummaries: aiPortfolioSummaries,
+        recentTrendIndicators: recentTrendIndicators,
+      };
+      
+      const result = await predictProjectPerformance(input);
+      setTrendsAndPredictions(result);
+    } catch (err) {
+      console.error('Error fetching trends and predictions:', err);
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred while fetching AI insights.";
+      setTrendsError(errorMessage);
+      toast({ title: "AI Prediction Error", description: errorMessage, variant: "destructive" });
+    } finally {
+      setIsLoadingTrendsAndPredictions(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'trends') {
+      fetchTrendsAndPredictions();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, filteredProjects]); // Re-fetch if tab changes or filtered data changes.
+
   
   const handleFilterToggle = <T,>(set: Set<T>, item: T, setter: React.Dispatch<React.SetStateAction<Set<T>>>) => {
     const newSet = new Set(set);
@@ -301,6 +403,9 @@ export default function ReportsPage() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+       toast({ title: "CSV Downloaded", description: `${filename} has been downloaded.`, variant: "default" });
+    } else {
+        toast({ title: "Download Failed", description: "Your browser does not support this download method.", variant: "destructive" });
     }
   };
 
@@ -391,7 +496,7 @@ export default function ReportsPage() {
 
 
   const generateReportHTML = (tab: string): string => {
-    let html = `<html><head><style>
+    let html = `<html><head><meta charset="UTF-8"><style>
       body { font-family: Helvetica, Arial, sans-serif; font-size: 10pt; color: #333; margin: 20px; }
       table { border-collapse: collapse; width: 100%; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
       th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; vertical-align: top; }
@@ -405,13 +510,13 @@ export default function ReportsPage() {
       .variance-positive { color: #38a169; } .variance-negative { color: #e53e3e; }
       h1 { font-size: 1.8em; color: #2d3748; margin-bottom: 0.5em; }
       h2 { font-size: 1.4em; color: #4a5568; margin-bottom: 0.5em; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3em; }
-      .card { border: 1px solid #e2e8f0; border-radius: 0.375rem; padding: 1.5rem; margin-bottom: 1.5rem; background-color: #fff; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); display: inline-block; width: calc(33% - 1.5rem); vertical-align: top; margin-right: 1rem;}
-      .card-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.25rem; color: #2d3748; }
-      .card-description { font-size: 0.875rem; color: #718096; margin-bottom: 1rem; }
-      .flex-container { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+      .card { border: 1px solid #e2e8f0; border-radius: 0.375rem; padding: 1.5rem; margin-bottom: 1.5rem; background-color: #fff; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); display: inline-block; width: calc(33% - 2rem); vertical-align: top; margin-right: 1rem; box-sizing: border-box;}
+      .flex-container { display: flex; flex-wrap: wrap; gap: 1rem; }
       .progress-bar { background-color: #e2e8f0; border-radius: 0.25rem; height: 0.5rem; overflow: hidden; margin-top: 0.25rem; }
       .progress-bar-inner { background-color: #4299e1; height: 100%; }
       .filter-info { margin-bottom: 20px; padding: 10px; background-color: #f9f9f9; border: 1px solid #eee; border-radius: 4px; font-size: 0.9em;}
+      .trend-improving { color: #38a169; } .trend-declining { color: #e53e3e; } .trend-stable { color: #718096; }
+      .confidence-high { font-weight: bold; color: #2f855a; } .confidence-medium { color: #d69e2e; } .confidence-low { color: #a0aec0; }
     </style></head><body><h1>ProjectPulse Report - ${escapeHtml(tab.charAt(0).toUpperCase() + tab.slice(1))}</h1>`;
 
     html += `<div class="filter-info"><strong>Filters Applied:</strong><br/>`;
@@ -472,6 +577,7 @@ export default function ReportsPage() {
         });
         html += `</ul></div>`;
       });
+      if (portfolioSummaries.length === 0) html += '<p>No portfolio data for current filters.</p>';
       html += `</div>`;
     } else if (tab === 'resources') {
       html += `<h2>Team Overview & Workload</h2><table>
@@ -494,7 +600,41 @@ export default function ReportsPage() {
           <td>${statusDistHtml}</td>
         </tr>`;
       });
+      if (teamLeadWorkloads.length === 0) html += '<tr><td colspan="7" style="text-align:center;">No team lead data for current filters.</td></tr>';
       html += `</tbody></table>`;
+    } else if (tab === 'trends') {
+       html += `<h2>Trends & AI Predictions</h2>`;
+       html += `<h3>Calculated Trend Indicators (based on current filtered data)</h3><div class="flex-container">`;
+       calculatedTrendIndicators.forEach(trend => {
+           html += `<div class="card" style="width: calc(50% - 2rem);">
+             <p><strong>Metric:</strong> ${escapeHtml(trend.metricName)}</p>
+             <p><strong>Current Value:</strong> ${escapeHtml(trend.currentValue)}</p>
+             <p><strong>Trend:</strong> <span class="trend-${trend.trend.toLowerCase()}">${escapeHtml(trend.trendDescription)}</span></p>
+             ${trend.historicalComparison ? `<p><small>Comparison: ${escapeHtml(trend.historicalComparison)}</small></p>` : ''}
+           </div>`;
+       });
+       if (calculatedTrendIndicators.length === 0) html += '<p>Not enough data to calculate simple trends.</p>';
+       html += `</div>`;
+
+       html += `<h3>AI-Powered Predictions & Insights</h3>`;
+       if (isLoadingTrendsAndPredictions) {
+           html += `<p>Loading AI predictions...</p>`;
+       } else if (trendsError) {
+           html += `<p style="color: red;">Error fetching AI predictions: ${escapeHtml(trendsError)}</p>`;
+       } else if (trendsAndPredictions && trendsAndPredictions.predictions.length > 0) {
+           html += `<div class="flex-container">`;
+           trendsAndPredictions.predictions.forEach(pred => {
+               html += `<div class="card" style="width: calc(50% - 2rem);">
+                   <p><strong>Area:</strong> ${escapeHtml(pred.area)}</p>
+                   <p><strong>Prediction:</strong> ${escapeHtml(pred.prediction)}</p>
+                   <p><strong>Confidence:</strong> <span class="confidence-${pred.confidence.toLowerCase()}">${escapeHtml(pred.confidence)}</span></p>
+                   ${pred.suggestion ? `<p><strong>Suggestion:</strong> ${escapeHtml(pred.suggestion)}</p>` : ''}
+               </div>`;
+           });
+           html += `</div>`;
+       } else {
+           html += `<p>No AI predictions available at the moment. Try adjusting filters or check back later.</p>`;
+       }
     }
     html += `</body></html>`;
     return html;
@@ -503,33 +643,91 @@ export default function ReportsPage() {
   const handleShareViaEmail = () => {
     const reportHtml = generateReportHTML(activeTab);
     const subject = `ProjectPulse Report: ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} (Filtered)`;
-    const body = `
-Please find the ${activeTab} report below. This report reflects the currently applied filters.
-
-${reportHtml}
-    `;
-    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     
-    if (mailtoLink.length > 2000) {
-      toast({
-        title: "Email Content Too Long",
-        description: "The generated HTML report is too large to be sent directly via email. Please try downloading as CSV or PDF.",
-        variant: "destructive",
-        duration: 7000,
-      });
+    // Attempt to use a simpler text/plain body as fallback if HTML is too long
+    let body = `Please find the ${activeTab} report attached or viewable in rich HTML format if your client supports it. This report reflects the currently applied filters.`;
+    let mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+    if (navigator.clipboard && typeof ClipboardItem !== "undefined") {
+        try {
+            const blobHtml = new Blob([reportHtml], { type: 'text/html' });
+            const clipboardItem = new ClipboardItem({ 'text/html': blobHtml });
+            navigator.clipboard.write([clipboardItem]).then(() => {
+                 toast({
+                    title: "Report Copied to Clipboard",
+                    description: "The HTML report has been copied. You can paste it into your email body.",
+                    variant: "default",
+                    duration: 7000,
+                  });
+                 // Optionally, still open mailto link for convenience
+                 window.location.href = mailtoLink;
+            }).catch(err => {
+                console.warn("Could not copy HTML to clipboard, falling back to simple mailto:", err);
+                // Fallback for browsers that might restrict complex clipboard items or if an error occurs
+                if (encodeURIComponent(reportHtml).length < 1800) { // Reduced limit for full HTML in body
+                     mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(reportHtml)}`;
+                }
+                window.location.href = mailtoLink;
+            });
+        } catch(e) { // Safari might throw SecurityError with ClipboardItem from a non-user gesture context
+            console.warn("ClipboardItem approach failed:", e);
+            if (encodeURIComponent(reportHtml).length < 1800) {
+                 mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(reportHtml)}`;
+            }
+            window.location.href = mailtoLink;
+        }
     } else {
-       window.location.href = mailtoLink;
+         // Fallback for older browsers or if Clipboard API is not fully supported
+        if (encodeURIComponent(reportHtml).length < 1800) { // Check length for direct body inclusion
+            mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(reportHtml)}`;
+        } else {
+             toast({
+                title: "Email Content Too Long for Direct Link",
+                description: "The HTML report is too large for a direct email link. Please download CSV and attach it, or try copying the report if your browser supports it.",
+                variant: "destructive",
+                duration: 9000,
+              });
+              // Don't open a mailto link that will likely fail or be truncated.
+              return; 
+        }
+        window.location.href = mailtoLink;
     }
   };
 
   const handleDownloadPDF = () => {
-    toast({
-      title: "PDF Download (Simulated)",
-      description: "Actual PDF generation would require a client or server-side library. This is a placeholder.",
-      variant: "default",
-      duration: 5000,
-    });
-  };
+    // This is a placeholder. Actual PDF generation needs a library.
+    const reportHtml = generateReportHTML(activeTab);
+    
+    // Simple print dialog as a pseudo-PDF export
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+        printWindow.document.write(reportHtml);
+        printWindow.document.close(); // Necessary for some browsers.
+        
+        // Delay print to allow content to render, then close
+        setTimeout(() => {
+            printWindow.print();
+            // Check if the window is still open before trying to close it, as user might close it manually
+            if (!printWindow.closed) {
+                 // Don't auto-close immediately, user might be interacting with print dialog
+                 // printWindow.close(); 
+            }
+        }, 500); // Adjust delay as needed
+        toast({
+            title: "Print to PDF",
+            description: "Your browser's print dialog should appear. Choose 'Save as PDF' or your PDF printer.",
+            variant: "default",
+            duration: 8000
+        });
+    } else {
+        toast({
+            title: "PDF Generation Failed",
+            description: "Could not open print window. Please check your browser's pop-up settings.",
+            variant: "destructive"
+        });
+    }
+};
+
 
   const MultiSelectFilter = ({ title, options, selectedValues, onValueChange }: { title: string, options: readonly string[], selectedValues: Set<string>, onValueChange: (item: string) => void }) => {
     const [open, setOpen] = React.useState(false);
@@ -593,10 +791,10 @@ ${reportHtml}
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <div className="flex items-center">
-          <FileText className="h-8 w-8 mr-3 text-primary shrink-0" />
+          <LineChartIcon className="h-8 w-8 mr-3 text-primary shrink-0" />
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Project Reports</h1>
-            <p className="text-sm text-muted-foreground">Analyze project data with advanced filters and export options.</p>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Advanced Reporting</h1>
+            <p className="text-sm text-muted-foreground">Analyze project data with advanced filters, trends, and export options.</p>
           </div>
         </div>
          <div className="flex gap-2 flex-wrap sm:flex-nowrap">
@@ -604,11 +802,12 @@ ${reportHtml}
                 if (activeTab === 'performance') handleDownloadPerformanceCSV();
                 else if (activeTab === 'portfolio') handleDownloadPortfolioSummariesCSV();
                 else if (activeTab === 'resources') handleDownloadTeamOverviewCSV();
+                else if (activeTab === 'trends') toast({ title: "CSV Export N/A", description: "AI predictions are best viewed online or in HTML format.", variant: "default"});
                 else toast({ title: "CSV Export", description: `CSV export is not available for this tab.`, variant: "default" });
             }} size="sm" variant="outline" title="Download current view as CSV">
                 <Download className="mr-2 h-4 w-4" /> CSV
             </Button>
-            <Button onClick={handleDownloadPDF} size="sm" variant="outline" title="Download current view as PDF (Simulated)">
+            <Button onClick={handleDownloadPDF} size="sm" variant="outline" title="Download current view as PDF (via Print)">
                 <FileType className="mr-2 h-4 w-4" /> PDF
             </Button>
             <Button onClick={handleShareViaEmail} size="sm" variant="outline" title="Share current view via Email">
@@ -644,15 +843,18 @@ ${reportHtml}
 
 
       <Tabs defaultValue="performance" className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 gap-2 mb-6">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
           <TabsTrigger value="performance" className="text-sm py-2.5">
-            <ListChecks className="mr-2 h-4 w-4" /> Project Performance ({filteredProjects.length})
+            <ListChecks className="mr-2 h-4 w-4" /> Performance ({filteredProjects.length})
           </TabsTrigger>
           <TabsTrigger value="portfolio" className="text-sm py-2.5">
-            <Briefcase className="mr-2 h-4 w-4" /> Portfolio Summaries ({portfolioSummaries.length})
+            <Briefcase className="mr-2 h-4 w-4" /> Portfolios ({portfolioSummaries.length})
           </TabsTrigger>
           <TabsTrigger value="resources" className="text-sm py-2.5">
-            <UsersRound className="mr-2 h-4 w-4" /> Team Overview ({teamLeadWorkloads.length})
+            <UsersRound className="mr-2 h-4 w-4" /> Team ({teamLeadWorkloads.length})
+          </TabsTrigger>
+          <TabsTrigger value="trends" className="text-sm py-2.5">
+            <Brain className="mr-2 h-4 w-4" /> Trends & AI Insights
           </TabsTrigger>
         </TabsList>
 
@@ -875,6 +1077,132 @@ ${reportHtml}
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="trends" className="mt-6">
+            <Card className="shadow-lg">
+                <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle className="text-2xl flex items-center">
+                                <Brain className="mr-3 h-7 w-7 text-primary" />
+                                Trends & AI Predictions
+                            </CardTitle>
+                            <CardDescription>
+                                Identify patterns and predict future performance with AI analysis.
+                                Results are based on the currently filtered project data.
+                            </CardDescription>
+                        </div>
+                        <Button onClick={fetchTrendsAndPredictions} disabled={isLoadingTrendsAndPredictions || filteredProjects.length === 0} size="sm">
+                            {isLoadingTrendsAndPredictions ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Brain className="mr-2 h-4 w-4" />}
+                            {isLoadingTrendsAndPredictions ? 'Analyzing...' : 'Re-analyze with AI'}
+                        </Button>
+                    </div>
+                </CardHeader>
+                <CardContent className="pt-2 space-y-6">
+                    {filteredProjects.length === 0 && (
+                         <Alert variant="default" className="border-yellow-500 text-yellow-700 dark:border-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20">
+                            <HelpCircle className="h-5 w-5 !text-yellow-600 dark:!text-yellow-500" />
+                            <ShadcnAlertTitle className="font-semibold">No Data for Analysis</ShadcnAlertTitle>
+                            <AlertDescription>
+                                There are no projects matching the current filters. Please adjust your filters to enable trend analysis and AI predictions.
+                            </AlertDescription>
+                        </Alert>
+                    )}
+                    {filteredProjects.length > 0 && (
+                        <>
+                        {/* Calculated Trend Indicators */}
+                        <Card>
+                            <CardHeader className="pb-2 pt-4">
+                                <CardTitle className="text-lg flex items-center">
+                                    <LineChartIcon className="mr-2 h-5 w-5 text-accent" />
+                                    Calculated Trend Indicators
+                                </CardTitle>
+                                <CardDescription className="text-xs">Basic trends based on comparing older vs. newer projects in the current filtered dataset.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                                {calculatedTrendIndicators.length === 0 && !isLoadingTrendsAndPredictions && <p className="text-sm text-muted-foreground col-span-full text-center py-4">Not enough distinct project start dates in the filtered set to calculate trends. Try broader filters.</p>}
+                                {calculatedTrendIndicators.map((indicator, idx) => (
+                                    <Card key={idx} className="bg-secondary/40 shadow-sm">
+                                        <CardHeader className="p-4 pb-2">
+                                            <CardTitle className="text-base">{indicator.metricName}</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-4 pt-0 text-sm">
+                                            <p>Current: <span className="font-semibold">{indicator.currentValue}</span></p>
+                                            <p className={cn(
+                                                indicator.trend === 'Improving' && 'text-green-600 dark:text-green-400',
+                                                indicator.trend === 'Declining' && 'text-red-600 dark:text-red-400',
+                                                indicator.trend === 'Stable' && 'text-muted-foreground'
+                                            )}>
+                                                Trend: {indicator.trendDescription}
+                                                {indicator.trend === 'Improving' && <TrendingUp className="inline ml-1 h-4 w-4" />}
+                                                {indicator.trend === 'Declining' && <TrendingDown className="inline ml-1 h-4 w-4" />}
+                                            </p>
+                                            {indicator.historicalComparison && <p className="text-xs text-muted-foreground">({indicator.historicalComparison})</p>}
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </CardContent>
+                        </Card>
+                    
+                        {/* AI Predictions Section */}
+                        <Card>
+                            <CardHeader className="pb-2 pt-4">
+                                <CardTitle className="text-lg flex items-center">
+                                    <Brain className="mr-2 h-5 w-5 text-accent" />
+                                    AI-Powered Predictions
+                                </CardTitle>
+                                 <CardDescription className="text-xs">Insights generated by AI based on the current filtered data. Confidence: High, Medium, Low.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="pt-2">
+                                {isLoadingTrendsAndPredictions && (
+                                    <div className="flex items-center justify-center py-10">
+                                        <Loader2 className="h-8 w-8 animate-spin text-primary mr-3" />
+                                        <p className="text-muted-foreground">AI is analyzing data and generating predictions...</p>
+                                    </div>
+                                )}
+                                {trendsError && !isLoadingTrendsAndPredictions && (
+                                    <Alert variant="destructive">
+                                        <AlertTriangle className="h-4 w-4" />
+                                        <ShadcnAlertTitle>Error Generating Predictions</ShadcnAlertTitle>
+                                        <AlertDescription>{trendsError}</AlertDescription>
+                                    </Alert>
+                                )}
+                                {!isLoadingTrendsAndPredictions && !trendsError && trendsAndPredictions && trendsAndPredictions.predictions.length > 0 && (
+                                    <div className="space-y-4">
+                                        {trendsAndPredictions.predictions.map((pred, idx) => (
+                                            <Alert key={idx} variant={pred.confidence === 'High' ? 'default' : pred.confidence === 'Medium' ? 'default' : 'default'} 
+                                                className={cn(
+                                                    "border-l-4",
+                                                    pred.confidence === 'High' && "border-green-500 bg-green-50 dark:bg-green-900/20",
+                                                    pred.confidence === 'Medium' && "border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20",
+                                                    pred.confidence === 'Low' && "border-gray-400 bg-gray-50 dark:bg-gray-700/20"
+                                                )}
+                                            >
+                                                <div className={cn("flex items-center font-semibold mb-1 text-sm",
+                                                    pred.confidence === 'High' && "text-green-700 dark:text-green-300",
+                                                    pred.confidence === 'Medium' && "text-yellow-700 dark:text-yellow-400",
+                                                    pred.confidence === 'Low' && "text-gray-600 dark:text-gray-300"
+                                                )}>
+                                                    {pred.confidence === 'High' && <CheckCircle2 className="h-4 w-4 mr-2" />}
+                                                    {pred.confidence === 'Medium' && <TrendingUp className="h-4 w-4 mr-2" />}
+                                                    {pred.confidence === 'Low' && <HelpCircle className="h-4 w-4 mr-2" />}
+                                                    {pred.area}: <span className="ml-1 font-normal text-foreground">{pred.prediction}</span>
+                                                </div>
+                                                {pred.suggestion && <AlertDescription className="text-xs text-muted-foreground pl-6">Suggestion: {pred.suggestion}</AlertDescription>}
+                                            </Alert>
+                                        ))}
+                                    </div>
+                                )}
+                                {!isLoadingTrendsAndPredictions && !trendsError && (!trendsAndPredictions || trendsAndPredictions.predictions.length === 0) && (
+                                    <p className="text-sm text-muted-foreground text-center py-6">No specific AI predictions generated for the current data. The AI might need more distinct data or clearer trends.</p>
+                                )}
+                            </CardContent>
+                        </Card>
+                        </>
+                    )}
+                </CardContent>
+            </Card>
+        </TabsContent>
       </Tabs>
 
        <Dialog open={isPortfolioModalOpen} onOpenChange={setIsPortfolioModalOpen}>
@@ -888,7 +1216,7 @@ ${reportHtml}
           <ScrollArea className="max-h-[65vh] mt-4 pr-3">
             {selectedPortfolioForModal && selectedPortfolioForModal.projects.length > 0 ? (
               <Table>
-                <TableHeader className="sticky top-0 bg-dialog-content z-10 shadow-sm">
+                <TableHeader className="sticky top-0 bg-background z-10 shadow-sm"> {/* Use bg-background for modal */}
                   <TableRow>
                     <TableHead className="w-[25%]">Project Name</TableHead>
                     <TableHead>Status</TableHead>
