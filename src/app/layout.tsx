@@ -5,7 +5,8 @@ import './globals.css';
 import { Header } from '@/components/layout/header';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
-import { AuthProvider } from '@/contexts/auth-context'; // Added import
+import { AuthProvider } from '@/contexts/auth-context';
+import { NotificationProvider } from '@/contexts/notification-context'; // Added import
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -36,12 +37,14 @@ export default function RootLayout({
           geistMono.variable
         )}
       >
-        <AuthProvider> {/* Wrapped with AuthProvider */}
-          <div className="relative flex min-h-screen flex-col">
-            <Header />
-            <main className="flex-1">{children}</main>
-          </div>
-          <Toaster />
+        <AuthProvider>
+          <NotificationProvider> {/* Wrapped with NotificationProvider */}
+            <div className="relative flex min-h-screen flex-col">
+              <Header />
+              <main className="flex-1">{children}</main>
+            </div>
+            <Toaster />
+          </NotificationProvider>
         </AuthProvider>
       </body>
     </html>

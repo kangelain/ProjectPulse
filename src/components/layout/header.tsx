@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Rocket, LayoutDashboard, ShieldAlert, UserCircle, LogIn, LogOut, FileText } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { Skeleton } from '@/components/ui/skeleton';
+import { NotificationsDropdown } from '@/components/layout/notifications-dropdown'; // Added import
 
 export function Header() {
   const { authState, logout } = useAuth();
@@ -41,6 +42,7 @@ export function Header() {
         </nav>
         
         <div className="flex items-center space-x-2 sm:space-x-3">
+          <NotificationsDropdown /> {/* Added NotificationsDropdown */}
           {authState.loading ? (
             <>
               <Skeleton className="h-9 w-20 rounded-md" />
