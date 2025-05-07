@@ -14,8 +14,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Button } from "@/components/ui/button";
-import { ListChecks, Briefcase, Users, TrendingUp, PieChart, UsersRound, AlertTriangle, Clock, CheckCircle2, Activity, Loader2, FileText, Download } from 'lucide-react';
+import { ListChecks, Briefcase, Users, TrendingUp, PieChart, UsersRound, AlertTriangle, Clock, CheckCircle2, Activity, Loader2, FileText, Download, Mail, FileType } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from "@/hooks/use-toast";
 
 
 const statusColors: Record<ProjectStatus, string> = {
@@ -65,8 +66,14 @@ interface TeamLeadWorkload {
 export default function ReportsPage() {
   const [projectMetrics, setProjectMetrics] = useState<Record<string, CalculatedProjectMetrics | null>>({});
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(true);
+  const [activeTab, setActiveTab] = useState<string>('performance');
+  const { toast } = useToast();
 
   useEffect(() => {
+    if (mockProjects.length === 0) {
+      setIsLoadingMetrics(false);
+      return;
+    }
     const metricsData: Record<string, CalculatedProjectMetrics | null> = {};
     const now = new Date();
     mockProjects.forEach(project => {
@@ -89,7 +96,7 @@ export default function ReportsPage() {
 
 
         metricsData[project.id] = {
-          daysRemaining: daysRemainingCalculated, // Keep it signed
+          daysRemaining: daysRemainingCalculated, 
           isOverdue: isOverdueCalculated,
           timelineProgress: timelineProgressCalculated,
         };
@@ -166,6 +173,16 @@ export default function ReportsPage() {
     }
     return stringValue;
   };
+  
+  const escapeHtml = (unsafe: string | number | null | undefined): string => {
+    if (unsafe === null || unsafe === undefined) return '';
+    return String(unsafe)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  };
 
   const handleDownloadPerformanceCSV = () => {
     const headers = [
@@ -218,6 +235,147 @@ export default function ReportsPage() {
     }
   };
 
+  const generateReportHTML = (tab: string): string => {
+    let html = `<html><head><style>
+      body { font-family: Helvetica, Arial, sans-serif; font-size: 10pt; color: #333; margin: 20px; }
+      table { border-collapse: collapse; width: 100%; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+      th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; vertical-align: top; }
+      th { background-color: #f8fafc; color: #4a5568; font-weight: 600; text-transform: uppercase; font-size: 0.85em;}
+      tr:nth-child(even) { background-color: #f7fafc; }
+      tr:hover { background-color: #edf2f7; }
+      .currency { text-align: right; }
+      .percentage { text-align: right; }
+      .status-on-track { color: #38a169; } /* green-600 */
+      .status-at-risk { color: #e53e3e; } /* red-600 */
+      .status-delayed { color: #dd6b20; } /* orange-600 */
+      .status-completed { color: #3182ce; } /* blue-600 */
+      .status-planning { color: #718096; } /* gray-600 */
+      .priority-high { color: #c53030; } /* red-700 */
+      .priority-medium { color: #d69e2e; } /* yellow-700 */
+      .priority-low { color: #2f855a; } /* green-700 */
+      .variance-positive { color: #38a169; }
+      .variance-negative { color: #e53e3e; }
+      h1 { font-size: 1.8em; color: #2d3748; margin-bottom: 0.5em; }
+      h2 { font-size: 1.4em; color: #4a5568; margin-bottom: 0.5em; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3em; }
+      .card { border: 1px solid #e2e8f0; border-radius: 0.375rem; padding: 1.5rem; margin-bottom: 1.5rem; background-color: #fff; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); }
+      .card-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.25rem; color: #2d3748; }
+      .card-description { font-size: 0.875rem; color: #718096; margin-bottom: 1rem; }
+      .flex-container { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+      .flex-item { flex: 1 1 300px; }
+      .progress-bar { background-color: #e2e8f0; border-radius: 0.25rem; height: 0.5rem; overflow: hidden; }
+      .progress-bar-inner { background-color: #4299e1; height: 100%; }
+    </style></head><body><h1>ProjectPulse Report - ${escapeHtml(tab.charAt(0).toUpperCase() + tab.slice(1))}</h1>`;
+
+    if (tab === 'performance') {
+      html += `<h2>Project Performance Details</h2><table>
+        <thead><tr><th>Project Name</th><th>Status</th><th>Priority</th><th>Completion %</th><th>Budget</th><th>Spent</th><th>Variance</th><th>Start Date</th><th>End Date</th><th>Days Left/Overdue</th><th>Team Lead</th></tr></thead>
+        <tbody>`;
+      mockProjects.forEach(project => {
+        const metrics = projectMetrics[project.id];
+        let daysRemainingDisplay = 'N/A';
+        if (metrics) {
+          if (project.status === 'Completed') daysRemainingDisplay = '<span class="status-completed">Completed</span>';
+          else if (metrics.isOverdue) daysRemainingDisplay = `<span class="status-at-risk">${Math.abs(metrics.daysRemaining)} days overdue</span>`;
+          else daysRemainingDisplay = `${metrics.daysRemaining} days left`;
+        }
+        const variance = project.budget - project.spent;
+        html += `<tr>
+          <td>${escapeHtml(project.name)}</td>
+          <td class="status-${project.status.toLowerCase().replace(' ', '-')}">${escapeHtml(project.status)}</td>
+          <td class="priority-${project.priority.toLowerCase()}">${escapeHtml(project.priority)}</td>
+          <td class="percentage">${escapeHtml(project.completionPercentage)}%</td>
+          <td class="currency">${escapeHtml(formatCurrency(project.budget))}</td>
+          <td class="currency">${escapeHtml(formatCurrency(project.spent))}</td>
+          <td class="currency ${variance >= 0 ? 'variance-positive' : 'variance-negative'}">${escapeHtml(formatCurrency(variance))}</td>
+          <td>${escapeHtml(formatDate(project.startDate))}</td>
+          <td>${escapeHtml(formatDate(project.endDate))}</td>
+          <td>${daysRemainingDisplay}</td>
+          <td>${escapeHtml(project.teamLead)}</td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+    } else if (tab === 'portfolio') {
+      html += `<h2>Portfolio Summaries</h2><div class="flex-container">`;
+      portfolioSummaries.forEach(summary => {
+        html += `<div class="card flex-item">
+          <div class="card-title">${escapeHtml(summary.portfolioName)}</div>
+          <div class="card-description">${escapeHtml(summary.totalProjects)} projects</div>
+          <p><strong>Avg. Completion:</strong> ${escapeHtml(summary.averageCompletion)}% 
+            <div class="progress-bar"><div class="progress-bar-inner" style="width:${summary.averageCompletion}%"></div></div>
+          </p>
+          <p><strong>Budget:</strong> ${escapeHtml(formatCurrency(summary.totalBudget))}</p>
+          <p><strong>Spent:</strong> ${escapeHtml(formatCurrency(summary.totalSpent))}</p>
+          <p><strong>Variance:</strong> <span class="${summary.budgetVariance >= 0 ? 'variance-positive' : 'variance-negative'}">${escapeHtml(formatCurrency(summary.budgetVariance))}</span></p>
+          <p><strong>Status Breakdown:</strong></p><ul>`;
+        Object.entries(summary.statusCounts).forEach(([status, count]) => {
+          if (count > 0) html += `<li>${escapeHtml(status)}: ${escapeHtml(count)}</li>`;
+        });
+        html += `</ul></div>`;
+      });
+      html += `</div>`;
+    } else if (tab === 'resources') {
+      html += `<h2>Team Overview & Workload</h2><table>
+        <thead><tr><th>Team Lead</th><th>Project Count</th><th>Active Projects (Name, Status, Priority)</th></tr></thead>
+        <tbody>`;
+      teamLeadWorkloads.forEach(lead => {
+        let projectsList = lead.projects
+          .filter(p => p.status !== 'Completed')
+          .map(p => `${escapeHtml(p.name)} (<span class="status-${p.status.toLowerCase().replace(' ', '-')}">${escapeHtml(p.status)}</span>, <span class="priority-${p.priority.toLowerCase()}">${escapeHtml(p.priority)}</span>)`)
+          .join('<br>');
+        if (lead.projects.filter(p => p.status === 'Completed').length > 0) {
+          projectsList += `<br><em>+${lead.projects.filter(p => p.status === 'Completed').length} completed</em>`;
+        }
+        if (lead.projects.filter(p => p.status !== 'Completed').length === 0) {
+          projectsList = '<em>No active projects.</em>';
+        }
+        html += `<tr>
+          <td>${escapeHtml(lead.teamLead)}</td>
+          <td style="text-align:center;">${escapeHtml(lead.projectCount)}</td>
+          <td>${projectsList}</td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+    }
+    html += `</body></html>`;
+    return html;
+  };
+
+  const handleShareViaEmail = () => {
+    const reportHtml = generateReportHTML(activeTab);
+    const subject = `ProjectPulse Report: ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`;
+    const body = `
+Please find the ${activeTab} report below.
+
+Note: This report is best viewed in an HTML-compatible email client.
+
+${reportHtml}
+    `;
+    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    
+    if (mailtoLink.length > 2000) { // Check for mailto link length limits (approximate)
+      toast({
+        title: "Email Content Too Long",
+        description: "The generated HTML report is too large to be sent directly via email. Please try downloading as CSV or PDF (when available).",
+        variant: "destructive",
+        duration: 7000,
+      });
+      // Fallback: Could offer to copy HTML to clipboard or download as .html file
+    } else {
+       window.location.href = mailtoLink;
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    // PDF generation is a complex client-side task (e.g., using jsPDF, html2canvas).
+    // For this demo, we'll just show a toast.
+    toast({
+      title: "PDF Download Not Implemented",
+      description: "PDF generation is planned for a future update.",
+      variant: "default",
+      duration: 5000,
+    });
+  };
+
 
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -229,7 +387,7 @@ export default function ReportsPage() {
       </div>
       
 
-      <Tabs defaultValue="performance" className="w-full">
+      <Tabs defaultValue="performance" className="w-full" onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 gap-2 mb-6">
           <TabsTrigger value="performance" className="text-sm py-2.5">
             <ListChecks className="mr-2 h-4 w-4" /> Project Performance
@@ -244,15 +402,22 @@ export default function ReportsPage() {
 
         <TabsContent value="performance" className="mt-6">
           <Card className="shadow-lg">
-            <CardHeader className="pb-4 flex flex-row items-center justify-between">
+            <CardHeader className="pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
                 <CardTitle className="text-2xl">Project Performance Details</CardTitle>
                 <CardDescription>Comprehensive overview of all projects, their status, and key metrics.</CardDescription>
               </div>
-              <Button onClick={handleDownloadPerformanceCSV} size="sm" variant="outline">
-                <Download className="mr-2 h-4 w-4" />
-                Download CSV
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={handleDownloadPerformanceCSV} size="sm" variant="outline">
+                  <Download className="mr-2 h-4 w-4" /> CSV
+                </Button>
+                <Button onClick={handleDownloadPDF} size="sm" variant="outline" disabled>
+                  <FileType className="mr-2 h-4 w-4" /> PDF
+                </Button>
+                <Button onClick={handleShareViaEmail} size="sm" variant="outline">
+                  <Mail className="mr-2 h-4 w-4" /> Share
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="pt-2">
               <ScrollArea className="h-[600px] w-full">
@@ -331,36 +496,53 @@ export default function ReportsPage() {
         </TabsContent>
 
         <TabsContent value="portfolio" className="mt-6">
+           <Card className="shadow-lg mb-6">
+             <CardHeader className="pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-2xl">Portfolio Summary Actions</CardTitle>
+                <CardDescription>Download or share this portfolio summary.</CardDescription>
+              </div>
+              <div className="flex gap-2">
+                 {/* CSV download might not be ideal for portfolio summary cards, so it's omitted here. */}
+                <Button onClick={handleDownloadPDF} size="sm" variant="outline" disabled>
+                  <FileType className="mr-2 h-4 w-4" /> PDF
+                </Button>
+                <Button onClick={handleShareViaEmail} size="sm" variant="outline">
+                  <Mail className="mr-2 h-4 w-4" /> Share
+                </Button>
+              </div>
+            </CardHeader>
+           </Card>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {portfolioSummaries.map(summary => (
               <Card key={summary.portfolioName} className="shadow-lg flex flex-col">
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-3 pt-5">
                   <CardTitle className="text-xl text-primary">{summary.portfolioName}</CardTitle>
                   <CardDescription>{summary.totalProjects} projects</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4 flex-grow pt-2">
+                <CardContent className="space-y-3 flex-grow pt-2 text-sm">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Avg. Completion</p>
+                    <p className="font-medium text-muted-foreground mb-1">Avg. Completion</p>
                     <div className="flex items-center">
                       <Progress value={summary.averageCompletion} className="h-2.5 mr-2 flex-1" aria-label={`Average completion ${summary.averageCompletion}%`} />
-                      <span className="text-sm font-semibold text-foreground">{summary.averageCompletion}%</span>
+                      <span className="font-semibold text-foreground">{summary.averageCompletion}%</span>
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Financials</p>
-                    <p className="text-xs text-muted-foreground">Budget: {formatCurrency(summary.totalBudget)}</p>
-                    <p className="text-xs text-muted-foreground">Spent: {formatCurrency(summary.totalSpent)}</p>
+                    <p className="font-medium text-muted-foreground mb-1">Financials</p>
+                    <p className="text-xs text-muted-foreground/80">Budget: {formatCurrency(summary.totalBudget)}</p>
+                    <p className="text-xs text-muted-foreground/80">Spent: {formatCurrency(summary.totalSpent)}</p>
                     <p className={cn("text-xs font-semibold", summary.budgetVariance >=0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
                       Variance: {formatCurrency(summary.budgetVariance)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1.5">Status Breakdown</p>
+                    <p className="font-medium text-muted-foreground mb-1.5">Status Breakdown</p>
                     <div className="space-y-1.5">
                     {Object.entries(summary.statusCounts).map(([status, count]) =>
                       count > 0 ? (
                         <div key={status} className="flex justify-between items-center text-xs">
-                           <Badge className={cn('text-xs py-0.5 px-2', statusColors[status as ProjectStatus])} variant="default">
+                           <Badge className={cn('text-xs py-0.5 px-2 font-normal', statusColors[status as ProjectStatus])} variant="default">
                              {statusIcons[status as ProjectStatus] && React.createElement(statusIcons[status as ProjectStatus], {className: "h-3 w-3 mr-1"})}
                              {status}
                            </Badge>
@@ -387,9 +569,20 @@ export default function ReportsPage() {
 
         <TabsContent value="resources" className="mt-6">
           <Card className="shadow-lg">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-2xl">Team Overview & Workload</CardTitle>
-              <CardDescription>Breakdown of projects managed by each team lead.</CardDescription>
+            <CardHeader className="pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-2xl">Team Overview & Workload</CardTitle>
+                <CardDescription>Breakdown of projects managed by each team lead.</CardDescription>
+              </div>
+              <div className="flex gap-2">
+                {/* CSV download for team workload might be relevant if detailed project lists are included in CSV, but for simplicity, keeping consistent action buttons. */}
+                <Button onClick={handleDownloadPDF} size="sm" variant="outline" disabled>
+                  <FileType className="mr-2 h-4 w-4" /> PDF
+                </Button>
+                <Button onClick={handleShareViaEmail} size="sm" variant="outline">
+                  <Mail className="mr-2 h-4 w-4" /> Share
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="pt-2">
               <ScrollArea className="h-[600px] w-full">
@@ -453,4 +646,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
 
