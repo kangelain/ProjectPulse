@@ -52,7 +52,7 @@ const RiskAssessmentPage = () => {
   const form = useForm<RiskAssessmentFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      selectedProjectId: MANUAL_ENTRY_VALUE, 
+      selectedProjectId: MANUAL_ENTRY_VALUE,
       projectDescription: '',
       projectTimeline: '',
       projectBudget: '',
@@ -63,20 +63,7 @@ const RiskAssessmentPage = () => {
 
   const selectedProjectId = form.watch('selectedProjectId');
 
-  const populateFormWithProjectData = useCallback((projectId: string | undefined) => {
-    if (!projectId || projectId === MANUAL_ENTRY_VALUE) {
-      const currentManualValues = form.getValues();
-      form.reset({
-        selectedProjectId: MANUAL_ENTRY_VALUE,
-        projectDescription: projectId === MANUAL_ENTRY_VALUE ? '' : currentManualValues.projectDescription,
-        projectTimeline: projectId === MANUAL_ENTRY_VALUE ? '' : currentManualValues.projectTimeline,
-        projectBudget: projectId === MANUAL_ENTRY_VALUE ? '' : currentManualValues.projectBudget,
-        teamComposition: projectId === MANUAL_ENTRY_VALUE ? '' : currentManualValues.teamComposition,
-        historicalData: currentManualValues.historicalData || '', 
-      });
-      return;
-    }
-
+  const populateFormWithProjectData = useCallback((projectId: string) => {
     const project = mockProjects.find(p => p.id === projectId);
     if (project) {
       const projectDescription = project.description;
@@ -93,6 +80,9 @@ Budget Utilization: ${project.budget > 0 ? ((project.spent / project.budget) * 1
 Assigned Team: ${project.assignedUsers && project.assignedUsers.length > 0 ? project.assignedUsers.join(', ') : 'No specific team members assigned.'}.
 Portfolio: ${project.portfolio}.
 Priority: ${project.priority}.`;
+      
+      // Preserve historical data if user entered it manually before selecting a project
+      const currentHistoricalData = form.getValues('historicalData');
 
       form.reset({
         selectedProjectId: projectId,
@@ -100,30 +90,29 @@ Priority: ${project.priority}.`;
         projectTimeline,
         projectBudget,
         teamComposition,
-        historicalData: form.getValues('historicalData') || '',
+        historicalData: currentHistoricalData || '',
       });
     }
-  }, [form]); 
+  }, [form]);
 
   useEffect(() => {
-    if (selectedProjectId !== MANUAL_ENTRY_VALUE) {
-        populateFormWithProjectData(selectedProjectId);
-    } else {
-        const currentValues = form.getValues();
-        if (currentValues.projectDescription && currentValues.projectTimeline && currentValues.projectBudget && currentValues.teamComposition &&
-            !mockProjects.find(p => p.description === currentValues.projectDescription) 
-        ) {
-        } else if (currentValues.selectedProjectId !== MANUAL_ENTRY_VALUE) { 
-          form.reset({
-            selectedProjectId: MANUAL_ENTRY_VALUE,
-            projectDescription: '',
-            projectTimeline: '',
-            projectBudget: '',
-            teamComposition: '',
-            historicalData: currentValues.historicalData || '',
-          });
-        }
+    if (selectedProjectId && selectedProjectId !== MANUAL_ENTRY_VALUE) {
+      populateFormWithProjectData(selectedProjectId);
+    } else if (selectedProjectId === MANUAL_ENTRY_VALUE) {
+      // When "Manual Entry" is selected or is the default
+      const historicalDataValue = form.getValues('historicalData'); // Preserve manually entered historical data
+      form.reset({
+        selectedProjectId: MANUAL_ENTRY_VALUE,
+        projectDescription: '',
+        projectTimeline: '',
+        projectBudget: '',
+        teamComposition: '',
+        historicalData: historicalDataValue || '', 
+      });
     }
+    // This effect runs when selectedProjectId changes.
+    // populateFormWithProjectData is stable due to useCallback.
+    // form is stable.
   }, [selectedProjectId, populateFormWithProjectData, form]);
 
 
@@ -161,24 +150,24 @@ Priority: ${project.priority}.`;
       setIsLoading(false);
     }
   }
-  
+
   const getRiskScoreColor = (score: number) => {
-    if (score <= 33) return 'bg-green-500'; 
-    if (score <= 66) return 'bg-yellow-500'; 
-    return 'bg-red-500'; 
+    if (score <= 33) return 'bg-green-500';
+    if (score <= 66) return 'bg-yellow-500';
+    return 'bg-red-500';
   };
 
   return (
-    <div className="container mx-auto py-8"> {/* Standardized container padding */}
-      <div className="flex items-center mb-6"> {/* Reduced bottom margin */}
-        <ShieldAlert className="h-7 w-7 mr-2.5 text-primary" /> {/* Adjusted icon size and margin */}
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground"> {/* Adjusted font size */}
+    <div className="container mx-auto py-8">
+      <div className="flex items-center mb-6">
+        <ShieldAlert className="h-7 w-7 mr-2.5 text-primary" />
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           AI-Powered Project Risk Assessment
         </h1>
       </div>
-      <Card className="shadow-lg"> {/* Consistent shadow */}
-        <CardHeader className="pb-4 pt-5 px-5"> {/* Adjusted padding */}
-          <CardTitle className="text-xl">Analyze Project Risks</CardTitle> {/* Adjusted title size */}
+      <Card className="shadow-lg">
+        <CardHeader className="pb-4 pt-5 px-5">
+          <CardTitle className="text-xl">Analyze Project Risks</CardTitle>
           <CardDescription className="text-sm">
             Select an existing project to pre-fill details or enter them manually.
             Our AI will analyze potential risks and suggest mitigation strategies.
@@ -186,22 +175,20 @@ Priority: ${project.priority}.`;
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-5 pt-2 px-5"> {/* Adjusted spacing and padding */}
+            <CardContent className="space-y-5 pt-2 px-5">
             <FormField
                 control={form.control}
                 name="selectedProjectId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-medium flex items-center gap-1.5"><Briefcase className="h-3.5 w-3.5 text-muted-foreground" />Select Project (Optional)</FormLabel> {/* Smaller label */}
-                    <Select 
-                        onValueChange={(value) => {
-                            field.onChange(value);
-                         }} 
-                        value={field.value || MANUAL_ENTRY_VALUE} 
+                    <FormLabel className="text-xs font-medium flex items-center gap-1.5"><Briefcase className="h-3.5 w-3.5 text-muted-foreground" />Select Project (Optional)</FormLabel>
+                    <Select
+                        onValueChange={field.onChange}
+                        value={field.value || MANUAL_ENTRY_VALUE}
                         disabled={isLoading}
                     >
                       <FormControl>
-                        <SelectTrigger className="h-10 text-sm"> {/* Consistent height and text size */}
+                        <SelectTrigger className="h-10 text-sm">
                           <SelectValue placeholder="Select a project to pre-fill details" />
                         </SelectTrigger>
                       </FormControl>
@@ -228,7 +215,7 @@ Priority: ${project.priority}.`;
                     <FormControl>
                       <Textarea
                         placeholder="Detailed description of the project, including goals, tasks, and resources..."
-                        rows={4} // Reduced rows
+                        rows={4}
                         {...field}
                         aria-describedby="projectDescription-message"
                         disabled={isLoading}
@@ -246,10 +233,10 @@ Priority: ${project.priority}.`;
                   <FormItem>
                     <FormLabel className="text-xs font-medium">Project Timeline</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Key milestones, deadlines, current status, and completion percentage..." 
-                        rows={3} // Reduced rows
-                        {...field} 
+                      <Textarea
+                        placeholder="Key milestones, deadlines, current status, and completion percentage..."
+                        rows={3}
+                        {...field}
                         aria-describedby="projectTimeline-message"
                         disabled={isLoading}
                         className="text-sm"
@@ -266,10 +253,10 @@ Priority: ${project.priority}.`;
                   <FormItem>
                     <FormLabel className="text-xs font-medium">Project Budget & Financials</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Total budget, amount spent, remaining, and budget utilization..." 
-                        rows={2} // Reduced rows
-                        {...field} 
+                      <Textarea
+                        placeholder="Total budget, amount spent, remaining, and budget utilization..."
+                        rows={2}
+                        {...field}
                         aria-describedby="projectBudget-message"
                         disabled={isLoading}
                         className="text-sm"
@@ -288,7 +275,7 @@ Priority: ${project.priority}.`;
                     <FormControl>
                       <Textarea
                         placeholder="Team lead, assigned members, portfolio, and project priority..."
-                        rows={2} // Reduced rows
+                        rows={2}
                         {...field}
                         aria-describedby="teamComposition-message"
                         disabled={isLoading}
@@ -308,8 +295,7 @@ Priority: ${project.priority}.`;
                     <FormControl>
                       <Textarea
                         placeholder="Relevant data from similar past projects, if available..."
-                        rows={2} // Reduced rows
-                        {...field}
+                        rows={2}
                         disabled={isLoading}
                         className="text-sm"
                       />
@@ -318,8 +304,8 @@ Priority: ${project.priority}.`;
                 )}
               />
             </CardContent>
-            <CardFooter className="flex justify-end pt-4 pb-5 px-5"> {/* Adjusted padding */}
-              <Button type="submit" disabled={isLoading || !form.formState.isValid && form.formState.isSubmitted} size="default" className="h-10 text-sm font-semibold"> {/* Consistent height and text */}
+            <CardFooter className="flex justify-end pt-4 pb-5 px-5">
+              <Button type="submit" disabled={isLoading || !form.formState.isValid && form.formState.isSubmitted} size="default" className="h-10 text-sm font-semibold">
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -338,18 +324,18 @@ Priority: ${project.priority}.`;
       </Card>
 
       {error && (
-        <Alert variant="destructive" className="mt-6"> {/* Adjusted margin */}
+        <Alert variant="destructive" className="mt-6">
           <ShieldAlert className="h-4 w-4" />
-          <AlertTitle className="text-sm font-semibold">Assessment Error</AlertTitle> {/* Adjusted text size */}
-          <AlertDescription className="text-xs">{error}</AlertDescription> {/* Adjusted text size */}
+          <AlertTitle className="text-sm font-semibold">Assessment Error</AlertTitle>
+          <AlertDescription className="text-xs">{error}</AlertDescription>
         </Alert>
       )}
 
       {assessmentResult && (
-        <Card className="mt-6 shadow-lg"> {/* Adjusted margin */}
-          <CardHeader className="pb-3 pt-4 px-5"> {/* Adjusted padding */}
-            <CardTitle className="flex items-center text-xl"> {/* Adjusted text size */}
-              <CheckCircle2 className="h-6 w-6 mr-2.5 text-green-500" /> {/* Adjusted icon size and margin */}
+        <Card className="mt-6 shadow-lg">
+          <CardHeader className="pb-3 pt-4 px-5">
+            <CardTitle className="flex items-center text-xl">
+              <CheckCircle2 className="h-6 w-6 mr-2.5 text-green-500" />
               Risk Assessment Results
             </CardTitle>
             {selectedProjectId && selectedProjectId !== MANUAL_ENTRY_VALUE && mockProjects.find(p => p.id === selectedProjectId) && (
@@ -358,35 +344,35 @@ Priority: ${project.priority}.`;
               </CardDescription>
             )}
           </CardHeader>
-          <CardContent className="space-y-5 pt-2 px-5 pb-5"> {/* Adjusted spacing and padding */}
+          <CardContent className="space-y-5 pt-2 px-5 pb-5">
             <div>
-              <h3 className="text-md font-semibold mb-1.5 flex items-center"> {/* Adjusted text size and margin */}
+              <h3 className="text-md font-semibold mb-1.5 flex items-center">
                 <Activity className="h-4 w-4 mr-2 text-accent" />
-                 Overall Risk Score: 
-                <span className={cn("ml-2 px-2 py-0.5 rounded text-xs text-white", getRiskScoreColor(assessmentResult.overallRiskScore))}> {/* Adjusted text size */}
+                 Overall Risk Score:
+                <span className={cn("ml-2 px-2 py-0.5 rounded text-xs text-white", getRiskScoreColor(assessmentResult.overallRiskScore))}>
                    {assessmentResult.overallRiskScore} / 100
                 </span>
               </h3>
-              <Progress 
-                value={assessmentResult.overallRiskScore} 
-                className="h-2.5"  // Slimmer progress bar
+              <Progress
+                value={assessmentResult.overallRiskScore}
+                className="h-2.5"
                 indicatorClassName={getRiskScoreColor(assessmentResult.overallRiskScore)}
                 aria-label={`Overall risk score: ${assessmentResult.overallRiskScore} out of 100`}
               />
-               <p className="text-xs text-muted-foreground mt-1"> {/* Adjusted text size and margin */}
+               <p className="text-xs text-muted-foreground mt-1">
                 Interpretation: {assessmentResult.overallRiskScore <= 33 ? "Low Risk" : assessmentResult.overallRiskScore <= 66 ? "Medium Risk" : "High Risk"}
               </p>
             </div>
 
-            <div className="p-3 bg-secondary/40 rounded-md shadow-xs"> {/* Adjusted padding and shadow */}
+            <div className="p-3 bg-secondary/40 rounded-md shadow-xs">
               <h3 className="text-md font-semibold mb-1.5 flex items-center">
                 <ListChecks className="h-4 w-4 mr-2 text-accent" />
                 Identified Risks
               </h3>
               {assessmentResult.identifiedRisks.length > 0 ? (
-                <ul className="list-disc list-inside space-y-1 pl-2"> {/* Adjusted spacing */}
+                <ul className="list-disc list-inside space-y-1 pl-2">
                   {assessmentResult.identifiedRisks.map((risk, index) => (
-                    <li key={`risk-${index}`} className="text-xs text-foreground">{risk}</li> {/* Adjusted text size */}
+                    <li key={`risk-${index}`} className="text-xs text-foreground">{risk}</li>
                   ))}
                 </ul>
               ) : (
