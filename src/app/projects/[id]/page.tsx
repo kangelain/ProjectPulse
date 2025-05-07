@@ -139,6 +139,25 @@ export default function ProjectDetailPage() {
     updateMockProject(updatedProjectData);
     setProject(updatedProjectData);
     setIsEditDialogOpen(false);
+    // Re-calculate metrics after saving
+    const now = new Date();
+    const endDate = parseISO(updatedProjectData.endDate);
+    const startDate = parseISO(updatedProjectData.startDate);
+    const daysRemainingCalculated = differenceInDays(endDate, now);
+    const totalProjectDuration = differenceInDays(endDate, startDate);
+    const daysPassed = Math.max(0, differenceInDays(now, startDate));
+    let timelineProgressCalculated = 0;
+    if (updatedProjectData.status === 'Completed') {
+        timelineProgressCalculated = 100;
+    } else if (totalProjectDuration > 0) {
+         timelineProgressCalculated = Math.min(100, Math.max(0, (daysPassed / totalProjectDuration) * 100));
+    } else {
+      timelineProgressCalculated = updatedProjectData.completionPercentage;
+    }
+     setClientCalculatedMetrics({
+        daysRemaining: daysRemainingCalculated,
+        timelineProgress: timelineProgressCalculated,
+      });
   }, []);
 
   const getRiskScoreColor = (score: number) => {
@@ -182,6 +201,24 @@ export default function ProjectDetailPage() {
       return 'N/A';
     }
   };
+
+  // Define TimelineProgressContent and TimelineProgressIndicator conditionally
+  let TimelineProgressContent: React.ReactNode;
+  let TimelineProgressIndicator: React.ReactNode;
+  if (!clientCalculatedMetrics) {
+    TimelineProgressContent = <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />;
+    TimelineProgressIndicator = <Progress value={0} aria-label="Loading timeline progress" className="h-2" />;
+  } else {
+      const { daysRemaining, timelineProgress } = clientCalculatedMetrics;
+      TimelineProgressContent = (
+         <span className={cn("font-medium", daysRemaining < 0 && project.status !== 'Completed' ? "text-destructive" : "text-foreground")}>
+            {daysRemaining >=0 ? `${daysRemaining} days remaining` : `${Math.abs(daysRemaining)} days overdue`}
+        </span>
+      );
+      TimelineProgressIndicator = (
+          <Progress value={timelineProgress} aria-label={`Timeline ${timelineProgress}% complete`} className="h-2" indicatorClassName={daysRemaining < 0 && project.status !== 'Completed' ? 'bg-destructive' : currentStatusStyles.progress} />
+      );
+  }
 
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -242,19 +279,9 @@ export default function ProjectDetailPage() {
             <div>
               <div className="mb-1 flex justify-between text-xs text-muted-foreground">
                 <span>Timeline Progress</span>
-                {clientCalculatedMetrics ? (
-                  <span className={cn("font-medium", clientCalculatedMetrics.daysRemaining < 0 && project.status !== 'Completed' ? "text-destructive" : "text-foreground")}>
-                    {clientCalculatedMetrics.daysRemaining >=0 ? `${clientCalculatedMetrics.daysRemaining} days remaining` : `${Math.abs(clientCalculatedMetrics.daysRemaining)} days overdue`}
-                  </span>
-                ) : (
-                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" /> // Smaller loader
-                )}
+                {TimelineProgressContent}
               </div>
-              {clientCalculatedMetrics ? (
-                <Progress value={clientCalculatedMetrics.timelineProgress} aria-label={`Timeline ${clientCalculatedMetrics.timelineProgress}% complete`} className="h-2" indicatorClassName={clientCalculatedMetrics.daysRemaining < 0 && project.status !== 'Completed' ? 'bg-destructive' : currentStatusStyles.progress} />
-              ) : (
-                <Progress value={0} aria-label="Loading timeline progress" className="h-2" />
-              )}
+              {TimelineProgressIndicator}
             </div>
           </div>
 
@@ -565,5 +592,7 @@ export default function ProjectDetailPage() {
   );
 }
 
-// Added DownloadCloud icon (kept as is)
+
+// Kept DownloadCloud icon definition for clarity, even though not modified
 // const DownloadCloud = (props: React.SVGProps<SVGSVGElement>) => ( ... );
+
