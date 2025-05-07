@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Project, KeyMilestone } from '@/types/project';
@@ -54,12 +55,11 @@ export function ProjectTimelineGantt({ projects }: ProjectTimelineGanttProps) {
   
   const totalDurationDays = Math.max(1, differenceInDays(overallEndDate, overallStartDate));
 
-  // Generate month markers for the timeline header
   const monthMarkers = [];
-  let currentDate = overallStartDate;
-  while (currentDate <= overallEndDate) {
-    monthMarkers.push(new Date(currentDate));
-    currentDate = addDays(currentDate, 30); // Approximate month step
+  let currentDateIterator = overallStartDate;
+  while (currentDateIterator <= overallEndDate) {
+    monthMarkers.push(new Date(currentDateIterator));
+    currentDateIterator = addDays(currentDateIterator, Math.max(1, Math.floor(totalDurationDays / 12)) || 30); // Aim for around 12 markers, or monthly
   }
 
 
@@ -74,19 +74,27 @@ export function ProjectTimelineGantt({ projects }: ProjectTimelineGanttProps) {
           <ScrollArea className="w-full h-[500px] whitespace-nowrap">
             <div className="relative py-2">
               {/* Timeline Header with Month Markers */}
-              <div className="sticky top-0 z-10 flex h-10 items-end bg-background border-b mb-2">
-                {monthMarkers.map((month, index) => {
-                  const offset = (differenceInDays(month, overallStartDate) / totalDurationDays) * 100;
-                  return (
-                    <div
-                      key={index}
-                      className="absolute text-xs text-muted-foreground"
-                      style={{ left: `${offset}%` }}
-                    >
-                      | {format(month, 'MMM yy')}
-                    </div>
-                  );
-                })}
+              <div className="sticky top-0 z-10 h-10 bg-background border-b mb-3">
+                <div className="relative h-full w-full">
+                  {monthMarkers.map((month, index) => {
+                    const offsetPercent = (differenceInDays(month, overallStartDate) / totalDurationDays) * 100;
+                    const clampedOffsetPercent = Math.max(0, Math.min(100, offsetPercent));
+
+                    return (
+                      <div
+                        key={`marker-${index}`}
+                        className="absolute top-0 h-full flex flex-col items-center"
+                        style={{ left: `${clampedOffsetPercent}%`, transform: 'translateX(-50%)' }}
+                        aria-hidden="true"
+                      >
+                        <span className="text-xs text-muted-foreground whitespace-nowrap pt-0.5">
+                          {format(month, 'MMM yy')}
+                        </span>
+                        <div className="flex-grow w-px bg-border opacity-60 mt-0.5"></div> {/* Subtle vertical line taking remaining height */}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Project Rows */}
@@ -99,7 +107,7 @@ export function ProjectTimelineGantt({ projects }: ProjectTimelineGanttProps) {
                 const projectWidth = (projectDurationDays / totalDurationDays) * 100;
 
                 return (
-                  <div key={project.id} className="mb-4">
+                  <div key={project.id} className="mb-4 pt-1"> {/* Added pt-1 to avoid overlap with header lines */}
                     <h4 className="text-sm font-medium mb-1 text-primary">{project.name}</h4>
                     <div className="relative h-8 bg-muted rounded overflow-hidden">
                       {/* Project Bar */}
@@ -107,14 +115,14 @@ export function ProjectTimelineGantt({ projects }: ProjectTimelineGanttProps) {
                         <TooltipTrigger asChild>
                            <div
                             className={cn(
-                              "absolute h-full bg-primary opacity-70 rounded",
-                              project.status === 'Completed' && 'bg-green-600',
-                              project.status === 'At Risk' && 'bg-red-600',
-                              project.status === 'Delayed' && 'bg-yellow-600',
+                              "absolute h-full bg-primary/80 hover:bg-primary rounded", // Used primary with opacity, hover effect
+                              project.status === 'Completed' && 'bg-green-600/80 hover:bg-green-600',
+                              project.status === 'At Risk' && 'bg-red-600/80 hover:bg-red-600',
+                              project.status === 'Delayed' && 'bg-yellow-600/80 hover:bg-yellow-600',
                             )}
                             style={{
                               left: `${Math.max(0, projectOffsetLeft)}%`,
-                              width: `${Math.min(100, projectWidth)}%`,
+                              width: `${Math.min(100 - Math.max(0, projectOffsetLeft), projectWidth)}%`, // Ensure bar stays within bounds
                             }}
                           />
                         </TooltipTrigger>
@@ -128,9 +136,13 @@ export function ProjectTimelineGantt({ projects }: ProjectTimelineGanttProps) {
                       {/* Milestones */}
                       {project.keyMilestones.map((milestone) => {
                         const milestoneDate = parseISO(milestone.date);
+                        // Only render milestone if it's within the project's own timeline for clarity
                         if (milestoneDate < projectStart || milestoneDate > projectEnd) return null;
 
-                        const milestoneOffsetLeft = (differenceInDays(milestoneDate, projectStart) / projectDurationDays) * 100;
+                        const milestoneOffsetWithinProject = (differenceInDays(milestoneDate, projectStart) / projectDurationDays) * 100;
+                         // Clamp offset to prevent overflow
+                        const clampedMilestoneOffset = Math.max(0, Math.min(100, milestoneOffsetWithinProject));
+
                         const MilestoneIcon = milestoneStatusIcons[milestone.status];
 
                         return (
@@ -138,10 +150,10 @@ export function ProjectTimelineGantt({ projects }: ProjectTimelineGanttProps) {
                             <TooltipTrigger asChild>
                               <div
                                 className={cn(
-                                  "absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full flex items-center justify-center",
+                                  "absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full flex items-center justify-center shadow", // Slightly larger, added shadow
                                   milestoneStatusColors[milestone.status]
                                 )}
-                                style={{ left: `${milestoneOffsetLeft}%` }}
+                                style={{ left: `${clampedMilestoneOffset}%` }} // Position relative to project bar start
                               >
                                 <MilestoneIcon className="w-2 h-2 text-white" />
                               </div>

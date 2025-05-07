@@ -52,7 +52,7 @@ export default function HomePage() {
       </div>
 
       <Tabs defaultValue="cards" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6"> {/* Updated grid layout */}
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-2 mb-6"> {/* Updated grid layout and added gap */}
           <TabsTrigger value="cards" className="text-sm">
             <List className="mr-2 h-4 w-4" /> Status Cards
           </TabsTrigger>
